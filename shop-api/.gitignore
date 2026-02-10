@@ -1,4 +1,0 @@
-# Tạo/ghi đè file .gitignore với 2 dòng
-
-node_modules
-.env
