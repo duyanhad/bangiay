@@ -9,19 +9,18 @@ const { notFound, errorHandler } = require("./middlewares/error.middleware");
 
 const app = express();
 
-// Security + performance (nhẹ nhưng chuẩn)
 app.use(helmet());
 app.use(compression());
 app.use(express.json({ limit: "1mb" }));
 
-// CORS whitelist (nếu không set thì allow all)
-const origins = (process.env.CORS_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
+// ✅ CORS phải đặt TRƯỚC routes
 app.use(cors({
-  origin: origins.length ? origins : true,
-  credentials: false
+  origin: true, // hoặc '*' (nhưng true linh hoạt hơn)
+  methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"],
 }));
+app.options(/.*/, cors()),// ✅ cho preflight
 
-// Rate-limit cho auth để chống spam
 app.use("/api/v1/auth", rateLimit({
   windowMs: 60 * 1000,
   max: 30
