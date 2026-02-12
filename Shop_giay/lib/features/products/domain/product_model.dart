@@ -95,6 +95,7 @@ class Product {
     required this.isActive,
     required this.images,
     required this.imageUrl,
+    
   });
 
   bool get hasDiscount => discount > 0 && finalPrice > 0 && finalPrice < price;

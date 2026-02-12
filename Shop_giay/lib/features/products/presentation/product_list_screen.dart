@@ -4,6 +4,10 @@ import '../data/product_api.dart';
 import '../domain/product_model.dart';
 import 'product_detail_screen.dart';
 import 'widgets/product_card.dart';
+import 'package:go_router/go_router.dart';
+import '../../auth/presentation/auth_controller.dart';
+import 'package:provider/provider.dart';
+
 
 enum _FilterType { all, category, sale }
 
@@ -213,17 +217,52 @@ class _ProductListScreenState extends State<ProductListScreen> {
               _FilterType.category => 'Danh mục: ${_selectedCategory ?? ''}',
             };
 
-            return CustomScrollView(
+         return CustomScrollView(
               slivers: [
-                // TOP BAR
+                // ✅ TOP BAR (giữ layout y như cũ nhưng bấm được)
                 SliverToBoxAdapter(
                   child: Container(
                     color: Colors.black,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    child: const Center(
-                      child: Text(
-                        'Đăng ký   /   Đăng nhập',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                    child: Center(
+                   child: Consumer<AuthController>(
+  builder: (context, auth, child) {
+    if (auth.user != null) {
+      return Text(
+        'Xin chào ${auth.user!.email}',
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
+      );
+    }
+
+ return Wrap(
+  crossAxisAlignment: WrapCrossAlignment.center,
+  children: [
+    GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/register'),
+      child: const Text(
+        'Đăng ký',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+      ),
+    ),
+    const Text(
+      '   /   ',
+      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+    ),
+    GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/login'),
+      child: const Text(
+        'Đăng nhập',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+      ),
+    ),
+  ],
+);
+  },
                       ),
                     ),
                   ),
