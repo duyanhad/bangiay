@@ -1,13 +1,11 @@
-const router = require("express").Router();
-const c = require("../controllers/order.controller");
-const { requireAuth, requireAdmin } = require("../middlewares/auth.middleware");
+const express = require('express');
+const router = express.Router();
 
-// user
-router.post("/", requireAuth, c.create);
-router.get("/my", requireAuth, c.myOrders);
+const { requireAuth } = require('../middlewares/auth.middleware');
+const ctrl = require('../controllers/order.controller');
 
-// admin
-router.get("/", requireAuth, requireAdmin, c.listAll);
-router.patch("/:id/status", requireAuth, requireAdmin, c.updateStatus);
+router.post('/', requireAuth, ctrl.create);
+router.post('/vnpay', requireAuth, ctrl.createVnpayPayment);
+router.get('/vnpay_return', ctrl.vnpayReturn);
 
 module.exports = router;

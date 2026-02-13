@@ -5,13 +5,14 @@ import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/products/presentation/product_detail_screen.dart';
 import '../features/products/presentation/product_list_screen.dart';
+import '../features/cart/presentation/cart_screen.dart';
 import '../shell/app_shell.dart';
-
+import '../features/checkout/presentation/checkout_screen.dart';
 class AppRouter {
   static final router = GoRouter(
     initialLocation: '/',
     routes: [
-      // ✅ Auth routes (để ngoài Shell để không dính bottom nav)
+      /// ✅ AUTH
       GoRoute(
         path: '/login',
         builder: (_, __) => const LoginScreen(),
@@ -21,24 +22,37 @@ class AppRouter {
         builder: (_, __) => const RegisterScreen(),
       ),
 
-      // ✅ App shell routes
+      /// ✅ APP SHELL
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
+          /// HOME
           GoRoute(
             path: '/',
             builder: (_, __) => const ProductListScreen(),
           ),
+
+          /// PRODUCT DETAIL
           GoRoute(
             path: '/product/:id',
             builder: (context, state) => ProductDetailScreen(
               productId: state.pathParameters['id']!,
             ),
           ),
-
-          GoRoute(path: '/cart', builder: (_, __) => const _Placeholder(title: 'Giỏ hàng')),
-          GoRoute(path: '/orders', builder: (_, __) => const _Placeholder(title: 'Đơn hàng')),
-          GoRoute(path: '/profile', builder: (_, __) => const _Placeholder(title: 'Tài khoản')),
+            GoRoute(
+  path: '/checkout',
+  builder: (context, state) => const CheckoutScreen(),
+),
+      /// ✅ CART — ĐÃ DỌN DẸP SẠCH SẼ
+         GoRoute(
+            path: '/cart',
+            builder: (context, state) => const CartScreen(), 
+          ),
+          /// PROFILE
+          GoRoute(
+            path: '/profile',
+            builder: (_, __) => const _Placeholder(title: 'Tài khoản'),
+          ),
         ],
       ),
     ],

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../data/product_api.dart';
 import '../domain/product_model.dart';
-
+import '../../cart/data/cart_api.dart';
+import '../../cart/data/cart_repository.dart';
+import '../../cart/presentation/cart_screen.dart';
+import 'package:dio/dio.dart';
+import '../../../core/config/app_config.dart';
 class ProductDetailScreen extends StatefulWidget {
-  /// Pass either [product] (from list) OR [productId] (from deep-link/go_router).
   final Product? product;
   final String? productId;
 
@@ -18,7 +21,17 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+    bool _isAdding = false; 
   final _api = ProductApi();
+  
+  final _cartRepo = CartRepository(
+  CartApi(
+    Dio(BaseOptions(baseUrl: AppConfig.baseUrl)),
+  ),
+  
+);
+
+
   Future<Product>? _future;
 
   int _selectedImage = 0;
@@ -61,7 +74,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     setState(() {
       _selectedSize = size;
       _maxStock = stock;
-      _qty = 1; // đổi size thì reset qty cho chắc
+      _qty = 1;
     });
   }
 
@@ -76,50 +89,56 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     });
   }
 
+  // --- PHẦN LOGIC ĐÃ SỬA ---
   void _addToCart(Product p) {
     if (_selectedSize == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn size trước khi thêm vào giỏ hàng')),
+        const SnackBar(content: Text('Vui lòng chọn size trước')),
       );
       return;
     }
-    if (_maxStock <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Size này đã hết hàng')),
-      );
-      return;
-    }
-
-    // TODO: Hook vào CartProvider/CartApi của bạn ở đây
-    // Ví dụ:
-    // context.read<CartProvider>().addItem(product: p, size: _selectedSize!, qty: _qty);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Đã thêm vào giỏ: ${p.name} / Size $_selectedSize / SL $_qty')),
-    );
+    _handleAddToCart(p, isBuyNow: false);
   }
 
   void _buyNow(Product p) {
     if (_selectedSize == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn size trước khi mua')),
+        const SnackBar(content: Text('Vui lòng chọn size trước')),
       );
       return;
     }
-    if (_maxStock <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Size này đã hết hàng')),
-      );
-      return;
-    }
+    _handleAddToCart(p, isBuyNow: true);
+  }
 
-    // TODO: Điều hướng sang checkout
-    // context.go('/checkout', extra: {...});
+  Future<void> _handleAddToCart(Product p, {bool isBuyNow = false}) async {
+  try {
+    setState(() => _isAdding = true);
+
+    await _cartRepo.addToCart(p.id, _qty);
+
+    if (!mounted) return;
+
+    setState(() => _isAdding = false);
+
+    if (isBuyNow) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CartScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã thêm ${p.name} vào giỏ hàng')),
+      );
+    }
+  } catch (e) {
+    setState(() => _isAdding = false);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Mua ngay: ${p.name} / Size $_selectedSize / SL $_qty')),
+      SnackBar(content: Text('Lỗi: $e')),
     );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -535,31 +554,32 @@ class _RightInfo extends StatelessWidget {
           const SizedBox(height: 16),
 
           // 2 nút: Thêm giỏ + Mua ngay
-          Row(
+         Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
+                child: ElevatedButton.icon(
+                  // Đã sửa thành _selectedSize cho khớp với khai báo của bạn
+                 onPressed: canAction ? onAddToCart : null,
+style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 54),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    side: BorderSide(color: canAction ? const Color(0xFFE11D48) : Colors.black12, width: 2),
-                    foregroundColor: canAction ? const Color(0xFFE11D48) : Colors.black38,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  onPressed: canAction ? onAddToCart : null,
-                  icon: const Icon(Icons.add_shopping_cart_outlined),
-                  label: const Text('Thêm giỏ', style: TextStyle(fontWeight: FontWeight.w900)),
+                  icon: const Icon(Icons.add_shopping_cart),
+                  label: const Text('Giỏ hàng', style: TextStyle(fontWeight: FontWeight.w900)),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: canAction ? const Color(0xFFE11D48) : Colors.black12,
-                    foregroundColor: canAction ? Colors.white : Colors.black38,
+                child: ElevatedButton.icon(
+                 onPressed: selectedSize == null ? null : onBuyNow,
+style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 54),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  onPressed: canAction ? onBuyNow : null,
                   icon: const Icon(Icons.shopping_bag_outlined),
                   label: const Text('Mua ngay', style: TextStyle(fontWeight: FontWeight.w900)),
                 ),
