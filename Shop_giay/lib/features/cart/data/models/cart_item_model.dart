@@ -5,7 +5,7 @@ class CartItem {
   final String image;
   final double price;
   final int quantity;
-  final String selectedSize; // 👈 Thêm trường này
+  final String size; // ✅ Đổi từ selectedSize thành size để khớp với CartScreen
 
   CartItem({
     required this.id,
@@ -14,7 +14,7 @@ class CartItem {
     required this.image,
     required this.price,
     required this.quantity,
-    required this.selectedSize, // 👈 Cập nhật constructor
+    required this.size, // ✅ Cập nhật ở đây
   });
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
@@ -28,7 +28,8 @@ class CartItem {
       image: imageUrl, 
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       quantity: json['quantity'] ?? 0,
-      selectedSize: (json['size'] ?? '40').toString(), // 👈 Lấy size từ JSON của Backend
+      // ✅ Lấy key 'size' từ JSON mà Backend trả về
+      size: (json['size'] ?? '').toString(), 
     );
   }
 }

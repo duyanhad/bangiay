@@ -11,6 +11,8 @@ class CartController extends ChangeNotifier {
 
   List<CartItem> get items => _items;
   bool get isLoading => _isLoading;
+  
+  // Tính tổng tiền dựa trên danh sách items hiện có
   double get total => _items.fold(0, (sum, item) => sum + (item.price * item.quantity));
 
   Future<void> loadCart() async {
@@ -19,7 +21,6 @@ class CartController extends ChangeNotifier {
     try {
       debugPrint("🛒 DEBUG: Đang gọi API lấy giỏ hàng...");
       _items = await repo.fetchCart();
-      // Kiểm tra xem Server trả về bao nhiêu món
       debugPrint("✅ DEBUG: Lấy về thành công ${_items.length} sản phẩm");
     } catch (e) {
       debugPrint("❌ DEBUG LỖI LOAD CART: $e");
@@ -29,23 +30,25 @@ class CartController extends ChangeNotifier {
     }
   }
 
-  Future<void> addToCart(String productId, int qty) async {
+  // CẬP NHẬT: Thêm String size vào tham số
+  Future<void> addToCart(String productId, int qty, String size) async {
     try {
-      debugPrint("➕ DEBUG: Đang thêm SP $productId vào giỏ...");
-      await repo.addToCart(productId, qty);
-      await loadCart(); // Load lại ngay để UI cập nhật
+      debugPrint("➕ DEBUG: Đang thêm SP $productId (Size: $size) vào giỏ...");
+      await repo.addToCart(productId, qty, size);
+      await loadCart(); 
     } catch (e) {
       debugPrint("❌ DEBUG LỖI ADD TO CART: $e");
       rethrow;
     }
   }
 
-  Future<void> updateQuantity(String productId, int newQty) async {
+  // CẬP NHẬT: Thêm String size vào tham số
+  Future<void> updateQuantity(String productId, int newQty, String size) async {
     try {
       if (newQty < 1) {
-        await repo.removeItem(productId);
+        await repo.removeItem(productId, size);
       } else {
-        await repo.updateQty(productId, newQty);
+        await repo.updateQty(productId, newQty, size);
       }
       await loadCart();
     } catch (e) {
@@ -53,9 +56,10 @@ class CartController extends ChangeNotifier {
     }
   }
 
-  Future<void> remove(String productId) async {
+  // CẬP NHẬT: Thêm String size vào tham số
+  Future<void> remove(String productId, String size) async {
     try {
-      await repo.removeItem(productId);
+      await repo.removeItem(productId, size);
       await loadCart();
     } catch (e) {
       debugPrint("❌ DEBUG LỖI REMOVE: $e");

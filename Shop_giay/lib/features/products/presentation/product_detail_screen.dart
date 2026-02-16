@@ -114,7 +114,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   try {
     setState(() => _isAdding = true);
 
-    await _cartRepo.addToCart(p.id, _qty);
+    await _cartRepo.addToCart(p.id, _qty, _selectedSize!);
 
     if (!mounted) return;
 

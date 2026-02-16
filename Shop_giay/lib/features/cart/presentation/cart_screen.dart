@@ -57,8 +57,17 @@ class _CartScreenState extends State<CartScreen> {
               final item = controller.items[index];
               return CartItemTile(
                 item: item,
-                onUpdateQty: (qty) => controller.updateQuantity(item.productId, qty),
-                onRemove: () => controller.remove(item.productId),
+                // ✅ SỬA LỖI: Truyền thêm item.size vào hàm updateQuantity
+                onUpdateQty: (qty) => controller.updateQuantity(
+                  item.productId, 
+                  qty, 
+                  item.size, 
+                ),
+                // ✅ SỬA LỖI: Truyền thêm item.size vào hàm remove
+                onRemove: () => controller.remove(
+                  item.productId, 
+                  item.size,
+                ),
               );
             },
           );
@@ -104,7 +113,6 @@ class _CartScreenState extends State<CartScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                // ✅ Dùng context.push theo đường dẫn đã định nghĩa trong AppRouter
                 onPressed: () => context.push('/checkout'),
                 child: const Text(
                   "THANH TOÁN",

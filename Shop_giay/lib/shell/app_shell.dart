@@ -5,22 +5,25 @@ class AppShell extends StatelessWidget {
   final Widget child;
   const AppShell({super.key, required this.child});
 
+  // Tối ưu hàm lấy index để đảm bảo luôn sáng đúng nút dưới thanh menu
   int _indexFromLocation(String location) {
     if (location.startsWith('/cart')) return 1;
     if (location.startsWith('/orders')) return 2;
     if (location.startsWith('/profile')) return 3;
-    return 0;
+    return 0; // Mặc định là trang Shop (/)
   }
 
   @override
   Widget build(BuildContext context) {
-    final location = GoRouterState.of(context).uri.toString();
-    final index = _indexFromLocation(location);
+    // Lấy full path để so sánh chính xác hơn
+    final String location = GoRouterState.of(context).matchedLocation;
+    final int index = _indexFromLocation(location);
 
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
+        // Giữ nguyên logic điều hướng của bạn
         onDestinationSelected: (i) {
           switch (i) {
             case 0:
@@ -38,10 +41,26 @@ class AppShell extends StatelessWidget {
           }
         },
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.storefront), label: 'Shop'),
-          NavigationDestination(icon: Icon(Icons.shopping_cart_outlined), label: 'Giỏ'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'Đơn'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Tôi'),
+          NavigationDestination(
+            icon: Icon(Icons.storefront_outlined), 
+            selectedIcon: Icon(Icons.storefront),
+            label: 'Shop',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.shopping_cart_outlined), 
+            selectedIcon: Icon(Icons.shopping_cart),
+            label: 'Giỏ',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined), 
+            selectedIcon: Icon(Icons.receipt_long),
+            label: 'Đơn',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline), 
+            selectedIcon: Icon(Icons.person),
+            label: 'Tôi',
+          ),
         ],
       ),
     );

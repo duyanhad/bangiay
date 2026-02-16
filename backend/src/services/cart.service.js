@@ -10,33 +10,30 @@ exports.getCart = async (userId) => {
   return cart;
 };
 
-exports.addToCart = async (userId, productId, quantity) => {
+exports.addToCart = async (userId, productId, quantity, size) => {
   const product = await Product.findById(productId);
   if (!product) throw new Error("Product not found");
 
   let cart = await Cart.findOne({ user: userId });
-  if (!cart) {
-    cart = new Cart({ user: userId, items: [] });
-  }
+  if (!cart) cart = new Cart({ user: userId, items: [] });
 
+  // Tìm sản phẩm cùng ID VÀ cùng Size
   const itemIndex = cart.items.findIndex(
-    (item) => item.product.toString() === productId
+    (item) => item.product.toString() === productId && item.size === size
   );
 
   if (itemIndex > -1) {
-    // Nếu đã có thì tăng số lượng
     cart.items[itemIndex].quantity += quantity;
   } else {
-    // ✅ CHỈ lưu những trường có trong cartItemSchema (cart.model.js)
-    // Không thêm name, image vào đây vì Schema của bạn không có các trường đó
     cart.items.push({
       product: product._id,
       quantity: quantity,
-      price: product.price, // Snapshot giá lúc mua
+      size: size, // [LƯU SIZE Ở ĐÂY]
+      price: product.final_price || product.price,
+      name: product.name,
+      image: product.thumb
     });
   }
-
-  // Lưu vào MongoDB
   return await cart.save();
 };
 

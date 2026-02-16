@@ -6,12 +6,10 @@ class CartApi {
   final Dio dio;
 
   CartApi(this.dio) {
-    // Auto attach token vào header
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await SecureStore.getToken();
-
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -26,24 +24,34 @@ class CartApi {
     return res.data;
   }
 
-  Future<void> addToCart(String productId, int qty) async {
+  // 1. THÊM SIZE VÀO ĐÂY
+  Future<void> addToCart(String productId, int qty, String size) async {
     await dio.post(
       Endpoints.cartAdd,
       data: {
         "productId": productId,
         "quantity": qty,
+        "size": size, // Gửi size lên Backend
       },
     );
   }
 
-  Future<void> updateQty(String productId, int qty) async {
+  // 2. CẬP NHẬT CẦN CẢ SIZE ĐỂ BACKEND TÌM ĐÚNG DÒNG
+  Future<void> updateQty(String productId, int qty, String size) async {
     await dio.put(
       "${Endpoints.cart}/item/$productId",
-      data: {"quantity": qty},
+      data: {
+        "quantity": qty,
+        "size": size, // Gửi size trong body
+      },
     );
   }
 
-  Future<void> removeItem(String productId) async {
-    await dio.delete("${Endpoints.cart}/item/$productId");
+  // 3. XÓA CẦN TRUYỀN SIZE QUA QUERY (?size=...)
+  Future<void> removeItem(String productId, String size) async {
+    await dio.delete(
+      "${Endpoints.cart}/item/$productId",
+      queryParameters: {"size": size}, // Truyền vào query để req.query.size nhận được
+    );
   }
 }

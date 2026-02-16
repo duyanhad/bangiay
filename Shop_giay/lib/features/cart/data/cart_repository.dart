@@ -12,10 +12,7 @@ class CartRepository {
       
       if (data['ok'] == true && data['cart'] != null) {
         final List itemsJson = data['cart']['items'] ?? [];
-        
-        // Debug để bạn thấy số lượng món hàng thực tế
         debugPrint("📦 Số món hàng từ Server: ${itemsJson.length}");
-
         return itemsJson.map((e) => CartItem.fromJson(e)).toList();
       }
       return [];
@@ -25,7 +22,13 @@ class CartRepository {
     }
   }
 
-  Future<void> addToCart(String productId, int qty) => api.addToCart(productId, qty);
-  Future<void> updateQty(String productId, int qty) => api.updateQty(productId, qty);
-  Future<void> removeItem(String productId) => api.removeItem(productId);
+  // CẬP NHẬT: Thêm tham số size cho cả 3 hàm dưới đây
+  Future<void> addToCart(String productId, int qty, String size) => 
+      api.addToCart(productId, qty, size);
+
+  Future<void> updateQty(String productId, int qty, String size) => 
+      api.updateQty(productId, qty, size);
+
+  Future<void> removeItem(String productId, String size) => 
+      api.removeItem(productId, size);
 }

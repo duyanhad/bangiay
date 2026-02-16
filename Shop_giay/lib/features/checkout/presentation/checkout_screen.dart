@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Để dùng kIsWeb
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart'; // Để mở link Web
+
+// --- 1. CART (GIỎ HÀNG) ---
+// Đảm bảo đường dẫn import đúng với cấu trúc dự án của bạn
+import '../../cart/domain/cart_controller.dart'; 
+import '../../cart/data/models/cart_item_model.dart'; 
 import 'package:go_router/go_router.dart';
-
-// --- Imports correct path based on your project structure ---
-import 'package:shop_giay/features/cart/domain/cart_controller.dart'; 
-
-import 'vnpay_web_view.dart'; 
+// --- 2. ORDER (ĐƠN HÀNG) ---
 import '../../orders/data/order_api.dart';
-import 'package:flutter/foundation.dart'; // Thêm dòng này
-import 'package:url_launcher/url_launcher.dart'; // Thêm dòng này
+
+// --- 3. THANH TOÁN ---
+// File này dùng để hiển thị Webview trên Mobile (Android/iOS)
+import 'vnpay_web_view.dart';
+
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -17,7 +23,7 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  // Giả định OrderApi đã được cấu hình Dio bên trong hoặc là Singleton
+  // API xử lý đơn hàng
   final OrderApi _orderApi = OrderApi();
   
   final _formKey = GlobalKey<FormState>();
@@ -25,11 +31,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
 
-  String _paymentMethod = 'cod'; // Default
+  String _paymentMethod = 'cod'; // Mặc định là COD
   Map<String, String>? _selectedBank;
-  bool _isProcessing = false;
+  bool _isProcessing = false; // Trạng thái đang xử lý (loading)
 
-  // Danh sách ngân hàng mẫu
+  // Danh sách ngân hàng mẫu (Demo QR Code)
   final List<Map<String, String>> _vnBanks = [
     {'name': 'BIDV', 'stk': '1234567890', 'owner': 'NGUYEN VAN A', 'logo': 'https://api.vietqr.io/img/BIDV.png', 'id': 'BIDV'},
     {'name': 'Techcombank', 'stk': '0987654321', 'owner': 'NGUYEN VAN A', 'logo': 'https://api.vietqr.io/img/TCB.png', 'id': 'TCB'},
@@ -44,7 +50,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.dispose();
   }
 
-  // --- LOGIC: CHỌN NGÂN HÀNG ---
+  // --- LOGIC 1: HIỂN THỊ CHỌN NGÂN HÀNG ---
   void _showBankSelection() {
     showModalBottomSheet(
       context: context,
@@ -58,7 +64,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             const Text("Chọn ngân hàng thanh toán", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 15),
-            // Sử dụng Expanded nếu danh sách dài, ở đây dùng shrinkWrap
             ListView.builder(
               shrinkWrap: true,
               itemCount: _vnBanks.length,
@@ -84,10 +89,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // --- LOGIC: ĐẶT HÀNG ---
+  // --- LOGIC 2: XỬ LÝ ĐẶT HÀNG (CORE) ---
   Future<void> _placeOrder() async {
+    // 1. Validate form
     if (!_formKey.currentState!.validate()) return;
 
+    // 2. Kiểm tra giỏ hàng
     final cartCtrl = context.read<CartController>();
     if (cartCtrl.items.isEmpty) {
       _showSnackBar("Giỏ hàng trống!", Colors.red);
@@ -97,54 +104,48 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      // 1. Chuẩn bị dữ liệu gửi Backend
-      // LƯU Ý: Backend Order Model của bạn chỉ chấp nhận enum ["cod", "vnpay"].
-      // Nên nếu khách chọn 'bank' (thủ công), ta vẫn gửi là 'cod' (Pending) 
-      // hoặc bạn phải sửa Backend thêm enum 'transfer'. Ở đây mình map về 'cod'.
+      // Chuẩn bị dữ liệu gửi lên Server
+      // Nếu chọn Bank thì gửi lên server là 'cod' để server tạo đơn bình thường, việc chuyển khoản xử lý ở Client
       final String methodToSend = (_paymentMethod == 'bank') ? 'cod' : _paymentMethod;
 
       final orderData = {
+        "name": _nameController.text.trim(),
+        "phone": _phoneController.text.trim(),
+        "address": _addressController.text.trim(),
         "items": cartCtrl.items.map((e) => {
           "productId": e.productId,
           "qty": e.quantity,
-          "size": e.selectedSize,
+          "size": e.size, 
           "price": e.price
         }).toList(),
         "total": cartCtrl.total,
         "paymentMethod": methodToSend,
-        "shippingInfo": {
-          "name": _nameController.text.trim(),
-          "phone": _phoneController.text.trim(),
-          "address": _addressController.text.trim(),
-        },
+        "note": _paymentMethod == 'bank' ? "CK ngân hàng: ${_selectedBank?['name']}" : "",
       };
 
-      // 2. Xử lý theo phương thức
+      // 3. Xử lý theo phương thức thanh toán
       if (_paymentMethod == 'vnpay') {
-        // 1. Gọi API lấy link
+        // --- CỔNG VNPAY ---
         final String? url = await _orderApi.createVnpayPayment(orderData);
+        if (url == null || url.isEmpty) throw "Lỗi: Không lấy được link thanh toán VNPay";
         
-        if (url == null || url.isEmpty) throw "Lỗi link thanh toán";
-        if (!mounted) return;
-
-        // --- BẮT ĐẦU ĐOẠN CODE MỚI ---
         if (kIsWeb) {
-          // Nếu là WEB: Mở tab mới
+          // Xử lý cho Web: Mở tab mới
           if (await canLaunchUrl(Uri.parse(url))) {
             await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-            _showWebPaymentDialog(); // Gọi popup thông báo
+            _showWebPaymentDialog(); // Hiện popup chờ xác nhận
           }
         } else {
-          // Nếu là MOBILE: Mở WebView trong App (như cũ)
+          // Xử lý cho Mobile: Mở WebView trong app
+          if (!mounted) return;
           final bool? success = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => VnpayWebView(url: url)),
           );
           if (success == true) _handleSuccess("Thanh toán thành công!");
         }
-
       } else {
-        // --- COD / BANK MANUAL FLOW ---
+        // --- COD HOẶC BANK TRANSFER ---
         await _orderApi.createOrder(orderData);
         _handleSuccess(_paymentMethod == 'bank' 
             ? "Đặt hàng thành công! Vui lòng chuyển khoản." 
@@ -158,41 +159,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  // --- LOGIC 3: XỬ LÝ KHI THÀNH CÔNG ---
   void _handleSuccess(String message) {
+    if (!mounted) return;
+    
     final cartCtrl = context.read<CartController>();
-    // Load lại cart để backend trả về mảng rỗng (sau khi đã xóa session cart)
-    // Hoặc gọi hàm cartCtrl.clearLocalCart() nếu bạn có viết.
-    cartCtrl.loadCart(); 
     
-    _showSnackBar(message, Colors.green);
+    // Copy dữ liệu để hiển thị trang Success
+    final List<CartItem> itemsBought = List.from(cartCtrl.items);
+    final double totalPaid = cartCtrl.total;
+    final String method = _paymentMethod;
+
+    // Xóa giỏ hàng
+    cartCtrl.loadCart(); // Hàm này load lại (thường sẽ reset nếu API trả về rỗng) hoặc dùng hàm clearCart() nếu bạn có
     
-    // Điều hướng về Home và xóa các màn hình trước đó
-    context.go('/'); 
+    // Chuyển trang và xóa sạch lịch sử navigation trước đó
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => OrderSuccessScreen(
+          totalAmount: totalPaid,
+          paymentMethod: method,
+          orderItems: itemsBought,
+        ),
+      ),
+      (route) => false, 
+    );
   }
 
   void _showSnackBar(String message, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), backgroundColor: color, behavior: SnackBarBehavior.floating),
     );
   }
-// Hàm hiển thị thông báo riêng cho Web
+
+  // Popup xác nhận cho Web sau khi mở tab VNPay
   void _showWebPaymentDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text("Đang thanh toán..."),
-        content: const Text("Cửa sổ thanh toán đã mở. Sau khi thanh toán xong, hãy bấm nút dưới đây."),
+        content: const Text("Cửa sổ thanh toán đã mở tab mới.\nSau khi thanh toán xong, hãy bấm xác nhận."),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              _handleSuccess("Đã ghi nhận đơn hàng!");
+              _handleSuccess("Đã ghi nhận thanh toán!");
             },
             child: const Text("Tôi đã thanh toán xong"),
           )
@@ -200,9 +213,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
     );
   }
-  // --- UI ---
+
+  // --- UI PART ---
   @override
   Widget build(BuildContext context) {
+    // Dùng watch để UI tự cập nhật khi giỏ hàng thay đổi
     final cartCtrl = context.watch<CartController>();
     final totalAmount = cartCtrl.total;
 
@@ -237,7 +252,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   onChanged: (val) {
                     setState(() {
                        _paymentMethod = val.toString();
-                       // Nếu chưa chọn ngân hàng thì hiện popup luôn
                        if(_selectedBank == null) _showBankSelection();
                     });
                   },
@@ -259,11 +273,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 },
               ),
 
-              // Hiển thị thông tin chuyển khoản & QR nếu chọn Bank Manual
+              // Nếu chọn bank thì hiện QR
               if (_paymentMethod == 'bank' && _selectedBank != null)
                 _buildBankCard(totalAmount),
 
-              const SizedBox(height: 100), // Khoảng trống cho nút đặt hàng
+              const SizedBox(height: 100), 
             ],
           ),
         ),
@@ -272,7 +286,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // Widget hiển thị danh sách sản phẩm
   Widget _buildOrderItems(CartController cart) {
     return Container(
       decoration: BoxDecoration(
@@ -292,7 +305,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               )
             ),
             title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-            subtitle: Text("Size: ${item.selectedSize} | x${item.quantity}"),
+            subtitle: Text("Size: ${item.size} | x${item.quantity}"),
             trailing: Text("${(item.price * item.quantity).toStringAsFixed(0)}đ"),
           )),
           const Divider(height: 1),
@@ -311,9 +324,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // Widget hiển thị QR Code và thông tin chuyển khoản
   Widget _buildBankCard(double amount) {
-    // Tạo link VietQR động
     String qrUrl = "https://api.vietqr.io/image/${_selectedBank!['id']}-${_selectedBank!['stk']}-compact2.jpg?amount=${amount.toInt()}&addInfo=ThanhToanDonHang";
     
     return Card(
@@ -416,4 +427,67 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if(val != 'bank') _selectedBank = null; 
     }),
   );
+}
+
+// --- MÀN HÌNH THÀNH CÔNG (NẰM CÙNG FILE ĐỂ TIỆN GỌI) ---
+class OrderSuccessScreen extends StatelessWidget {
+  final double totalAmount;
+  final String paymentMethod;
+  final List<CartItem> orderItems;
+
+  const OrderSuccessScreen({
+    super.key,
+    required this.totalAmount,
+    required this.paymentMethod,
+    required this.orderItems,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 80),
+              const SizedBox(height: 20),
+              const Text(
+                "ĐẶT HÀNG THÀNH CÔNG!",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Tổng thanh toán: ${totalAmount.toStringAsFixed(0)}đ",
+                style: const TextStyle(fontSize: 16),
+              ),
+              Text(
+                "Hình thức: ${paymentMethod == 'cod' ? 'Tiền mặt' : paymentMethod == 'vnpay' ? 'VNPay' : 'Chuyển khoản'}",
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+         onPressed: () {
+  // Lệnh này sẽ đưa người dùng về trang chủ (path '/')
+  // GoRouter sẽ tự động hiển thị AppShell và thanh menu cho bạn
+  context.go('/'); 
+},
+                  child: const Text("Tiếp tục mua sắm", style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
