@@ -5,6 +5,8 @@ class Endpoints {
   static const authRegister = '/auth/register';
   static const authLogin = '/auth/login';
   static const authMe = '/auth/me';
+  static const authProfile = '/auth/profile';
+  static const authChangePassword = '/auth/change-password';
  //cart
     static const String cart = "/cart";
   static const String cartAdd = "/cart/add";

@@ -73,7 +73,33 @@ class AuthController extends ChangeNotifier {
       notifyListeners();
     }
   }
+  Future<String?> updateProfile(Map<String, dynamic> data) async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      user = await _api.updateProfile(data);
+      return null;
+    } catch (e) {
+      return e.toString();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
+  Future<String?> changePassword(String oldPass, String newPass) async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      await _api.changePassword(oldPass, newPass);
+      return null;
+    } catch (e) {
+      return e.toString();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
   Future<void> logout() async {
     await SecureStore.clearToken();
     user = null;

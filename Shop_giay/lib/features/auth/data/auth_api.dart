@@ -46,4 +46,25 @@ class AuthApi {
     final data = (res.data['data'] ?? {}) as Map<String, dynamic>;
     return AppUser.fromJson(data);
   }
+
+  // --- HÀM CẬP NHẬT PROFILE ---
+  Future<AppUser> updateProfile(Map<String, dynamic> data) async {
+    final res = await _dio.put(
+      Endpoints.authProfile, // Đảm bảo đã thêm cái này vào file endpoints.dart
+      data: data,
+    );
+    final responseData = (res.data['data'] ?? {}) as Map<String, dynamic>;
+    return AppUser.fromJson(responseData);
+  }
+
+  // --- HÀM ĐỔI MẬT KHẨU ---
+  Future<void> changePassword(String oldPassword, String newPassword) async {
+    await _dio.put(
+      Endpoints.authChangePassword, // Đảm bảo đã thêm cái này vào file endpoints.dart
+      data: {
+        'oldPassword': oldPassword,
+        'newPassword': newPassword,
+      },
+    );
+  }
 }
