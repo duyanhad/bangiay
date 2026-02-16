@@ -4,7 +4,7 @@ import '../../../core/ui/app_radius.dart';
 
 class ProductsStyles {
   static const pagePadding = EdgeInsets.all(S.md);
-  static final cardRadius = BorderRadius.all(Radius.circular(R.md));
+  static const cardRadius = BorderRadius.all(Radius.circular(R.md));
 
   // 🎨 Màu chủ đạo (bạn đổi tùy thích)
   static const primary = Color(0xFF00796B); // teal

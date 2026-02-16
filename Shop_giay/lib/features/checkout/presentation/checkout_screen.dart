@@ -126,7 +126,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       // 3. Xử lý theo phương thức thanh toán
       if (_paymentMethod == 'vnpay') {
         // --- CỔNG VNPAY ---
-        final String? url = await _orderApi.createVnpayPayment(orderData);
+        final String url = await _orderApi.createVnpayPayment(orderData);
         if (url == null || url.isEmpty) throw "Lỗi: Không lấy được link thanh toán VNPay";
         
         if (kIsWeb) {

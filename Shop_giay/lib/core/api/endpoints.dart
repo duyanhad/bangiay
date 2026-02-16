@@ -7,6 +7,8 @@ class Endpoints {
   static const authMe = '/auth/me';
   static const authProfile = '/auth/profile';
   static const authChangePassword = '/auth/change-password';
+  static const authUpdateProfile = '/auth/update-profile'; 
+
  //cart
     static const String cart = "/cart";
   static const String cartAdd = "/cart/add";
@@ -15,5 +17,8 @@ class Endpoints {
 // Orders
   static const String orders = "/orders";
   static const String vnpay = "/orders/vnpay";
+  //Admin
+  static const adminStats = '/admin/stats'; 
+
 }
 

@@ -238,10 +238,10 @@ class _DetailBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = product;
 
-    final imgs = <String>[
+    final imgs = <String>{
       if (p.imageUrl.isNotEmpty) p.imageUrl,
       ...p.images.where((e) => e.isNotEmpty),
-    ].toSet().toList();
+    }.toList();
 
     final mainUrl = imgs.isNotEmpty ? imgs[selectedImage.clamp(0, imgs.length - 1)] : '';
 

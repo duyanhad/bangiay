@@ -297,10 +297,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
 
                 // ✅ BANNER (assets/network)
-                SliverToBoxAdapter(
+                const SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                    child: const _PromoBanner(),
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    child: _PromoBanner(),
                   ),
                 ),
 
