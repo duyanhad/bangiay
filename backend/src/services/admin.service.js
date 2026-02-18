@@ -4,45 +4,81 @@ const User = require("../models/user.model");
 const Category = require("../models/category.model");
 const { ApiError } = require("../utils/apiError");
 
-// --- 1. DASHBOARD & THỐNG KÊ ---
+// ============================================================
+// --- 1. DASHBOARD & THỐNG KÊ (ĐÃ SỬA ĐỂ HIỆN LIST TRÊN APP) ---
+// ============================================================
 
 exports.getDashboardStats = async () => {
-  // Thực hiện song song các query đếm để tối ưu hiệu năng
-  const [userCount, productCount, orderCount, revenueAgg, stockAgg] = await Promise.all([
+  // Thực hiện song song các query để tối ưu tốc độ
+  const [
+    userCount, 
+    productCount, 
+    orderCount, 
+    revenueAgg, 
+    stockAgg,
+    // 🔥 THÊM 2 BIẾN NÀY ĐỂ TRẢ VỀ CHO APP FLUTTER
+    topSellingData,
+    lowStockData
+  ] = await Promise.all([
     User.countDocuments({ role: "user" }),
     Product.countDocuments(),
     Order.countDocuments(),
-    // Tính tổng doanh thu (chỉ đơn đã xác nhận/thành công)
+    
+    // Tính tổng doanh thu (chỉ tính đơn đã xác nhận/thành công)
     Order.aggregate([
       { $match: { status: { $in: ["confirmed", "shipping", "done"] } } }, 
       { $group: { _id: null, revenue: { $sum: "$total" } } }
     ]),
-    // ✅ Tính tổng tồn kho (Total Stock) - Cần cái này cho Flutter
+    
+    // Tính tổng tồn kho
     Product.aggregate([
       { $group: { _id: null, totalStock: { $sum: "$stock" } } }
-    ])
+    ]),
+
+    // 🔥 Query 1: Top 5 Bán chạy (Cho Flutter)
+    Product.find()
+      .sort({ soldCount: -1 })
+      .limit(5)
+      .select("name images price stock soldCount category"),
+    
+    // 🔥 Query 2: Top 5 Sắp hết hàng (Cho Flutter)
+    Product.find({ stock: { $lte: 5 } }) // Lấy những cái dưới 5
+      .sort({ stock: 1 }) 
+      .limit(5)
+      .select("name images price stock soldCount category")
   ]);
 
   return {
     userCount,
-    // ✅ Đổi tên biến cho khớp với Flutter Model (AdminStats)
-    productCount: productCount, 
-    orderCount: orderCount,     
+    productCount, 
+    orderCount,     
     revenue: revenueAgg[0]?.revenue || 0, 
-    totalStock: stockAgg[0]?.totalStock || 0 
+    totalStock: stockAgg[0]?.totalStock || 0,
+    // ✅ QUAN TRỌNG: Trả về 2 mảng này thì Flutter mới hiện list được
+    topSelling: topSellingData, 
+    lowStock: lowStockData      
   };
 };
 
-// ✅ THÊM HÀM NÀY (Vì Controller đang gọi nó)
+// --- CÁC HÀM THỐNG KÊ KHÁC (GIỮ NGUYÊN) ---
+
+// API riêng lẻ lấy low stock (nếu web admin cần dùng riêng)
 exports.getLowStock = async () => {
-  // Lấy 5 sản phẩm có tồn kho <= 5, sắp xếp tăng dần theo stock
   return await Product.find({ stock: { $lte: 5 } })
     .sort({ stock: 1 }) 
     .limit(5)
     .select("name images price stock category");
 };
 
-// Biểu đồ doanh thu (Chart)
+// API riêng lẻ lấy top selling (nếu web admin cần dùng riêng)
+exports.getTopSelling = async () => {
+  return await Product.find()
+    .sort({ soldCount: -1 })
+    .limit(5)
+    .select("name images price soldCount category");
+};
+
+// Biểu đồ doanh thu
 exports.getRevenueChart = async (type = "day") => {
   let dateFormat;
   if (type === "month") dateFormat = "%Y-%m";      
@@ -73,18 +109,12 @@ exports.getRevenueChart = async (type = "day") => {
   return stats;
 };
 
-// Top sản phẩm bán chạy
-exports.getTopSelling = async () => {
-  return await Product.find()
-    .sort({ soldCount: -1 })
-    .limit(5)
-    .select("name images price soldCount category");
-};
-
-// --- 2. QUẢN LÝ USER ---
+// ============================================================
+// --- 2. QUẢN LÝ USER (GIỮ NGUYÊN) ---
+// ============================================================
 
 exports.getAllUsers = async (page = 1, limit = 10, search = "") => {
-  const query = { role: "user" }; // Chỉ lấy user thường, không lấy admin
+  const query = { role: "user" }; 
   if (search) query.email = { $regex: search, $options: "i" };
 
   const skip = (page - 1) * limit;
@@ -111,7 +141,9 @@ exports.deleteUser = async (userId) => {
   return await User.findByIdAndDelete(userId);
 };
 
-// --- 3. QUẢN LÝ DANH MỤC (CATEGORY) ---
+// ============================================================
+// --- 3. QUẢN LÝ DANH MỤC (GIỮ NGUYÊN) ---
+// ============================================================
 
 exports.createCategory = async ({ name, image }) => {
   if (!name) throw new ApiError("Category name required", 400);
@@ -126,7 +158,9 @@ exports.deleteCategory = async (id) => {
   return Category.findByIdAndDelete(id);
 };
 
-// --- 4. QUẢN LÝ ĐƠN HÀNG (ORDER) ---
+// ============================================================
+// --- 4. QUẢN LÝ ĐƠN HÀNG (GIỮ NGUYÊN) ---
+// ============================================================
 
 exports.getAllOrders = async (page = 1, limit = 10, status) => {
   const query = {};

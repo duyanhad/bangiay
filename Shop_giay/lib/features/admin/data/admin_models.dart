@@ -3,9 +3,9 @@
 class AdminStats {
   final int productCount;
   final int orderCount;
-  final num revenue;     
+  final num revenue;
   final int totalStock;
-  final int unansweredComments; 
+  final int unansweredComments;
   final List<SimpleProduct> lowStock;
   final List<SimpleProduct> topSelling;
 
@@ -21,11 +21,14 @@ class AdminStats {
 
   factory AdminStats.fromJson(Map<String, dynamic> json) {
     return AdminStats(
-      productCount: json['productCount'] ?? 0,
-      orderCount: json['orderCount'] ?? 0,
-      revenue: json['revenue'] ?? 0,
-      totalStock: json['totalStock'] ?? 0,
-      unansweredComments: json['unansweredComments'] ?? 0,
+      // Sử dụng int.tryParse để an toàn nếu API trả về chuỗi "10" thay vì số 10
+      productCount: int.tryParse(json['productCount']?.toString() ?? '0') ?? 0,
+      orderCount: int.tryParse(json['orderCount']?.toString() ?? '0') ?? 0,
+      revenue: num.tryParse(json['revenue']?.toString() ?? '0') ?? 0,
+      totalStock: int.tryParse(json['totalStock']?.toString() ?? '0') ?? 0,
+      unansweredComments: int.tryParse(json['unansweredComments']?.toString() ?? '0') ?? 0,
+      
+      // Map mảng an toàn
       lowStock: (json['lowStock'] as List? ?? [])
           .map((e) => SimpleProduct.fromJson(e))
           .toList(),
@@ -40,10 +43,10 @@ class AdminStats {
 class SimpleProduct {
   final String id;
   final String name;
-  final int stock;      
-  final int soldCount;  
+  final int stock;
+  final int soldCount;
   final num price;
-  final List<String> images; // ✅ ĐÃ THÊM TRƯỜNG NÀY
+  final List<String> images; 
 
   SimpleProduct({
     required this.id,
@@ -51,34 +54,51 @@ class SimpleProduct {
     this.stock = 0,
     this.soldCount = 0,
     this.price = 0,
-    required this.images, // ✅ Bắt buộc có images
+    required this.images,
   });
 
   factory SimpleProduct.fromJson(Map<String, dynamic> json) {
     return SimpleProduct(
-      id: json['_id'] ?? '',
-      name: json['name'] ?? 'Không tên',
-      stock: _parseStock(json), // Dùng hàm phụ để tính stock an toàn
-      soldCount: json['sold'] ?? json['soldCount'] ?? 0,
-      price: json['price'] ?? 0,
-      // ✅ Map dữ liệu ảnh từ JSON
-      images: (json['images'] as List? ?? []).map((e) => e.toString()).toList(),
+      // MongoDB luôn trả về _id, map sang id của Dart
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Sản phẩm không tên',
+      
+      // Parse số an toàn tuyệt đối
+      stock: _parseStock(json),
+      soldCount: int.tryParse(json['soldCount']?.toString() ?? json['sold']?.toString() ?? '0') ?? 0,
+      price: num.tryParse(json['price']?.toString() ?? '0') ?? 0,
+      
+      // Xử lý ảnh: Đảm bảo luôn là List<String>, loại bỏ null
+      images: (json['images'] as List? ?? [])
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty) // Lọc bỏ chuỗi rỗng
+          .toList(),
     );
   }
 
-  // Hàm phụ xử lý stock (phòng trường hợp API trả về mảng sizes thay vì số int)
+  // Hàm phụ xử lý stock thông minh
   static int _parseStock(Map<String, dynamic> json) {
-    if (json['stock'] != null) return json['stock']; // Nếu có sẵn stock
-    if (json['totalStock'] != null) return json['totalStock']; // Hoặc totalStock
+    // 1. Ưu tiên lấy trực tiếp nếu backend trả về số
+    if (json['stock'] != null) {
+      return int.tryParse(json['stock'].toString()) ?? 0;
+    }
     
-    // Nếu trả về mảng sizes (S, M, L...), cộng dồn lại
+    // 2. Dự phòng field totalStock
+    if (json['totalStock'] != null) {
+      return int.tryParse(json['totalStock'].toString()) ?? 0;
+    }
+
+    // 3. Nếu backend trả về mảng variants/sizes, tự cộng dồn
+    // (Phòng trường hợp cấu trúc thay đổi trong tương lai)
     if (json['sizes'] != null && json['sizes'] is List) {
       int sum = 0;
       for (var s in json['sizes']) {
-        sum += (s['qty'] ?? 0) as int;
+        // Cộng dồn qty an toàn
+        sum += int.tryParse(s['qty']?.toString() ?? '0') ?? 0;
       }
       return sum;
     }
+    
     return 0;
   }
 }
