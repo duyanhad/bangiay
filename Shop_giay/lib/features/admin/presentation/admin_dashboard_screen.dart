@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-// ✅ 1. Import đúng file màu vừa tạo
+// ✅ 1. Import đúng file màu
 import '../../../core/theme/admin_colors.dart';
 
-// ✅ 2. Import Controller và Model (kiểm tra lại đường dẫn nếu bạn lưu khác)
+// ✅ 2. Import Controller và Model
 import '../presentation/admin_controller.dart';
-import '../data/admin_models.dart'; // File này chứa class AdminStats và SimpleProduct
+import '../data/admin_models.dart';
+
+// ✅ 3. Import Drawer (Menu bên trái)
+import '../widgets/admin_drawer.dart'; 
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -32,6 +35,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return Scaffold(
       backgroundColor: AdminColors.bg,
+      
+      // 🔥 THÊM DÒNG NÀY ĐỂ HIỆN MENU TRÁI
+      drawer: const AdminDrawer(), 
+      
+      appBar: AppBar(
+        title: const Text("Dashboard Admin", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.black), // Màu icon menu (3 gạch)
+      ),
+
       body: controller.isLoading
           ? const Center(child: CircularProgressIndicator())
           : stats == null
@@ -50,12 +65,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               : SingleChildScrollView(
                   child: Column(
                     children: [
-                      _buildHeader(),
+                      _buildHeader(), // Header màu xanh
                       _buildRevenue(stats),
                       _buildStats(stats),
                       _buildLowStock(stats),
                       _buildTopSelling(stats),
-                      const SizedBox(height: 50), // Khoảng trống dưới cùng
+                      const SizedBox(height: 50),
                     ],
                   ),
                 ),
@@ -66,8 +81,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildHeader() {
     return Container(
-      width: double.infinity, // Full chiều ngang
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [AdminColors.header1, AdminColors.header2],
@@ -81,16 +96,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Dashboard Admin",
+            "Xin chào, Admin!",
             style: TextStyle(
               color: Colors.white,
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
           SizedBox(height: 5),
           Text(
-            "Tổng quan tình hình kinh doanh",
+            "Tổng quan tình hình kinh doanh hôm nay",
             style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
         ],
@@ -193,7 +208,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return _listSection("🔥 Bán chạy nhất", stats.topSelling, isLowStock: false);
   }
 
-  // ✅ Đã sửa lỗi logic map dữ liệu ở đây
   Widget _listSection(String title, List<SimpleProduct> items, {required bool isLowStock}) {
     if (items.isEmpty) return const SizedBox.shrink();
 
@@ -215,21 +229,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               border: Border.all(color: Colors.grey.shade200),
             ),
             child: Column(
-              children: items.map((product) { // Đổi tên biến e thành product cho dễ hiểu
+              children: items.map((product) { 
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: CircleAvatar(
-                    backgroundColor: isLowStock ? Colors.red.shade50 : Colors.blue.shade50,
-                    child: Icon(
-                      isLowStock ? Icons.warning_amber_rounded : Icons.whatshot,
-                      color: isLowStock ? Colors.red : Colors.blue,
-                      size: 20,
+                  
+                  // Hiển thị ảnh thay vì icon
+                  leading: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade200),
+                      image: DecorationImage(
+                        image: (product.images.isNotEmpty)
+                          ? NetworkImage(product.images.first)
+                          : const AssetImage('assets/images/placeholder.png') as ImageProvider,
+                        fit: BoxFit.cover
+                      )
                     ),
                   ),
-                  // ✅ SỬA LỖI: Dùng product.name thay vì product["name"]
+                  
                   title: Text(product.name,
                       maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w600)),
+                  
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -237,7 +259,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      // ✅ SỬA LỖI: Truy cập thuộc tính object
                       isLowStock
                           ? "SL: ${product.stock}"
                           : "Đã bán: ${product.soldCount}",

@@ -1,27 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-// ✅ SỬ DỤNG APP CONFIG (An toàn hơn DioClient)
+// ✅ SỬ DỤNG APP CONFIG
 import '../../../core/config/app_config.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   final dynamic order;
   const OrderDetailScreen({super.key, required this.order});
 
-  // --- HÀM XỬ LÝ ẢNH CHUẨN (Logic 10.0.2.2 cho Android) ---
+  // --- HÀM XỬ LÝ ẢNH CHUẨN ---
   String _getValidImageUrl(String? path) {
     if (path == null || path.isEmpty) return "";
     if (path.startsWith('http')) return path;
 
-    // 1. Lấy BaseURL từ AppConfig
     String base = AppConfig.baseUrl;
 
-    // 2. Fix lỗi Android Emulator (localhost -> 10.0.2.2)
     if (base.contains('localhost')) {
       base = base.replaceFirst('localhost', '10.0.2.2');
     }
 
-    // 3. Xử lý dấu gạch chéo
     if (base.endsWith('/')) base = base.substring(0, base.length - 1);
     String cleanPath = path.startsWith('/') ? path : '/$path';
 
@@ -31,23 +28,30 @@ class OrderDetailScreen extends StatelessWidget {
   // --- HÀM FORMAT TIỀN TỆ ---
   String _formatCurrency(dynamic price) {
     final format = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-    return format.format(price ?? 0);
+    // Ép kiểu về double/int để tránh lỗi format
+    return format.format(double.tryParse(price.toString()) ?? 0);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Safety check: Đảm bảo items là List
+    // Logic sửa lỗi: Truy xuất dữ liệu lồng nhau từ Backend (populate userId)
     final List items = (order['items'] is List) ? order['items'] : [];
 
-    // Lấy thông tin khách hàng
-    final String customerName = order['name'] ?? order['userId']?['name'] ?? 'Khách lẻ';
-    final String phone = order['phone'] ?? order['userId']?['phone'] ?? '---';
-    final String address = order['address'] ?? order['userId']?['address'] ?? '---';
+    // Sửa logic: Ưu tiên lấy trực tiếp từ Order (vì khi tạo đơn đã lưu name/phone/address snapshot)
+    final String customerName = order['name'] ?? 
+                               (order['userId'] is Map ? order['userId']['name'] : 'Khách lẻ');
+    
+    final String phone = order['phone'] ?? 
+                        (order['userId'] is Map ? order['userId']['phone'] : '---');
+    
+    final String address = order['address'] ?? 
+                          (order['userId'] is Map ? order['userId']['address'] : '---');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text("Chi tiết đơn hàng"),
+        // Sửa logic: Hiển thị 6 ký tự cuối của ID cho chuyên nghiệp
+        title: Text("Chi tiết đơn #${order['_id']?.toString().substring(order['_id'].toString().length - 6).toUpperCase() ?? ''}"),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -57,8 +61,8 @@ class OrderDetailScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. Header Trạng thái
-            _buildStatusHeader(order['status'] ?? 'pending'),
+            // 1. Header Trạng thái (Logic check trạng thái lcase)
+            _buildStatusHeader(order['status']?.toString().toLowerCase() ?? 'pending'),
 
             // 2. Thông tin nhận hàng
             Container(
@@ -70,7 +74,7 @@ class OrderDetailScreen extends StatelessWidget {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.location_on, color: Colors.blue, size: 20), // Đổi màu icon cho nổi
+                      Icon(Icons.location_on, color: Colors.blue, size: 20),
                       SizedBox(width: 8),
                       Text("Địa chỉ nhận hàng", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ],
@@ -95,10 +99,10 @@ class OrderDetailScreen extends StatelessWidget {
                 children: [
                   const Text("Sản phẩm", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 10),
-                  if (items.isEmpty) const Text("Không có sản phẩm nào", style: TextStyle(fontStyle: FontStyle.italic)),
+                  if (items.isEmpty) 
+                    const Center(child: Text("Không có sản phẩm nào", style: TextStyle(fontStyle: FontStyle.italic))),
                   
                   ...items.map((item) {
-                    // Gọi hàm xử lý ảnh
                     String imgUrl = _getValidImageUrl(item['image']);
 
                     return Container(
@@ -109,7 +113,6 @@ class OrderDetailScreen extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Ảnh sản phẩm
                           ClipRRect(
                             borderRadius: BorderRadius.circular(6),
                             child: Container(
@@ -125,13 +128,16 @@ class OrderDetailScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // Thông tin sản phẩm
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item['name'] ?? 'Sản phẩm', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
+                                Text(item['name'] ?? 'Sản phẩm', 
+                                    maxLines: 2, 
+                                    overflow: TextOverflow.ellipsis, 
+                                    style: const TextStyle(fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 6),
+                                // Sửa logic: Check null cho size
                                 Text("Size: ${item['size'] ?? 'Free'}", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                                 const SizedBox(height: 6),
                                 Row(
@@ -202,7 +208,6 @@ class OrderDetailScreen extends StatelessWidget {
     final m = method?.toLowerCase() ?? 'cod';
     if (m == 'cod') return 'Thanh toán khi nhận hàng (COD)';
     if (m == 'vnpay') return 'Ví điện tử VNPAY';
-    if (m == 'bank') return 'Chuyển khoản ngân hàng';
     return m.toUpperCase();
   }
 
@@ -211,16 +216,14 @@ class OrderDetailScreen extends StatelessWidget {
     String text;
     IconData icon;
 
-    switch (status.toLowerCase()) {
-      case 'success':
-      case 'completed':
+    // Logic: Khớp với Enum trong order.model.js của bạn
+    switch (status) {
       case 'done':
-        color = const Color(0xFF00C853); // Xanh lá đậm hơn chút
+        color = const Color(0xFF00C853);
         text = "Hoàn thành";
         icon = Icons.check_circle;
         break;
       case 'shipping':
-      case 'delivering':
         color = Colors.blue;
         text = "Đang giao hàng";
         icon = Icons.local_shipping;
@@ -236,7 +239,7 @@ class OrderDetailScreen extends StatelessWidget {
         icon = Icons.cancel;
         break;
       default:
-        color = const Color(0xFFFFAB00); // Vàng cam
+        color = const Color(0xFFFFAB00);
         text = "Chờ xử lý";
         icon = Icons.hourglass_top;
     }
