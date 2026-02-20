@@ -6,36 +6,35 @@ import '../data/admin_models.dart';
 class AdminApi {
   final Dio _dio = DioClient.dio;
 
-  // 1. Lấy thống kê Dashboard
+  // ======================================================
+  // 1. DASHBOARD STATS
+  // ======================================================
   Future<AdminStats> getStats() async {
     final res = await _dio.get(Endpoints.adminStats);
     final data = res.data['data'] as Map<String, dynamic>;
     return AdminStats.fromJson(data);
   }
 
-  // 2. Lấy toàn bộ đơn hàng (Cho Admin) - ĐÃ FIX LỖI JSONMAP
+  // ======================================================
+  // 2. ORDERS MANAGEMENT
+  // ======================================================
   Future<List<dynamic>> getAllOrders() async {
     try {
-      final res = await _dio.get('/admin/orders'); 
+      final res = await _dio.get('/admin/orders');
+
       if (res.data['ok'] == true) {
         final rawData = res.data['data'];
 
-        // TRƯỜNG HỢP 1: Backend trả thẳng về Mảng (List)
-        if (rawData is List) {
-          return rawData;
-        } 
-        // TRƯỜNG HỢP 2: Backend trả về Object/Map (Thường gặp khi có phân trang)
-        else if (rawData is Map) {
-          // Thử lấy danh sách từ các key phổ biến (docs, orders, data, items...)
-          if (rawData.containsKey('docs')) return rawData['docs'] as List<dynamic>;
-          if (rawData.containsKey('orders')) return rawData['orders'] as List<dynamic>;
-          if (rawData.containsKey('data')) return rawData['data'] as List<dynamic>;
-          if (rawData.containsKey('items')) return rawData['items'] as List<dynamic>;
-          
-          print("⚠️ Cấu trúc dữ liệu chưa xác định từ Backend: $rawData");
-          return [];
+        if (rawData is List) return rawData;
+
+        if (rawData is Map) {
+          if (rawData.containsKey('docs')) return rawData['docs'];
+          if (rawData.containsKey('orders')) return rawData['orders'];
+          if (rawData.containsKey('data')) return rawData['data'];
+          if (rawData.containsKey('items')) return rawData['items'];
         }
       }
+
       return [];
     } catch (e) {
       print("Lỗi API getAllOrders: $e");
@@ -43,13 +42,97 @@ class AdminApi {
     }
   }
 
-  // 3. Cập nhật trạng thái đơn hàng
   Future<bool> updateOrderStatus(String id, String status) async {
     try {
-      final res = await _dio.put('/admin/orders/$id/status', data: {'status': status});
-      return res.data['ok'] == true;
+      final res = await _dio.put(
+        '/admin/orders/$id/status',
+        data: {'status': status},
+      );
+
+      return res.data['ok'] == true ||
+          res.statusCode == 200;
     } catch (e) {
       print("Lỗi API updateOrderStatus: $e");
+      return false;
+    }
+  }
+
+  // ======================================================
+  // 3. PRODUCTS MANAGEMENT
+  // ======================================================
+
+  /// GET PRODUCTS (optional search)
+  Future<List<dynamic>> getAllProducts({String? search}) async {
+    try {
+      final res = await _dio.get(
+        Endpoints.products,
+        queryParameters: {
+          if (search != null && search.isNotEmpty) 'search': search,
+        },
+      );
+
+      if (res.data['ok'] == true ||
+          res.statusCode == 200) {
+        final rawData = res.data['data'];
+
+        if (rawData is List) return rawData;
+
+        if (rawData is Map) {
+          if (rawData.containsKey('docs')) return rawData['docs'];
+          if (rawData.containsKey('data')) return rawData['data'];
+          if (rawData.containsKey('items')) return rawData['items'];
+        }
+      }
+
+      return [];
+    } catch (e) {
+      print("Lỗi API getAllProducts: $e");
+      return [];
+    }
+  }
+
+  /// CREATE PRODUCT
+  Future<bool> createProduct(
+      Map<String, dynamic> data) async {
+    try {
+      final res = await _dio.post(
+        Endpoints.products,
+        data: data,
+      );
+
+      return res.data['ok'] == true ||
+          res.statusCode == 200 ||
+          res.statusCode == 201;
+    } catch (e) {
+      print("Lỗi API createProduct: $e");
+      return false;
+    }
+  }
+
+  /// UPDATE PRODUCT
+  Future<bool> updateProduct(
+      String id, Map<String, dynamic> data) async {
+    try {
+      final res = await _dio.patch('${Endpoints.products}/$id', data: data);
+
+      return res.data['ok'] == true ||
+          res.statusCode == 200;
+    } catch (e) {
+      print("Lỗi API updateProduct: $e");
+      return false;
+    }
+  }
+
+  /// DELETE PRODUCT
+  Future<bool> deleteProduct(String id) async {
+    try {
+      final res =
+          await _dio.delete('${Endpoints.products}/$id');
+
+      return res.data['ok'] == true ||
+          res.statusCode == 200;
+    } catch (e) {
+      print("Lỗi API deleteProduct: $e");
       return false;
     }
   }
