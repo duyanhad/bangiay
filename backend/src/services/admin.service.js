@@ -145,17 +145,62 @@ exports.deleteUser = async (userId) => {
 // --- 3. QUẢN LÝ DANH MỤC (GIỮ NGUYÊN) ---
 // ============================================================
 
-exports.createCategory = async ({ name, image }) => {
-  if (!name) throw new ApiError("Category name required", 400);
-  return Category.create({ name, image });
+// ============================================================
+// --- 3. QUẢN LÝ DANH MỤC (FIXED PRO VERSION)
+// ============================================================
+
+exports.createCategory = async ({ name, image, description }) => {
+  if (!name) {
+    throw new ApiError("Category name required", 400);
+  }
+
+  const existing = await Category.findOne({ name: name.toLowerCase() });
+  if (existing) {
+    throw new ApiError("Category already exists", 400);
+  }
+
+  return await Category.create({
+    name,
+    image,
+    description,
+  });
 };
 
 exports.getAllCategories = async () => {
-  return Category.find().sort({ createdAt: -1 });
+  return await Category.find().sort({ createdAt: -1 });
+};
+
+exports.updateCategory = async (id, data) => {
+  const updated = await Category.findByIdAndUpdate(
+    id,
+    data,
+    { new: true }
+  );
+
+  if (!updated) {
+    throw new ApiError("Category not found", 404);
+  }
+
+  return updated;
 };
 
 exports.deleteCategory = async (id) => {
-  return Category.findByIdAndDelete(id);
+  // 🔥 Không cho xóa nếu còn sản phẩm
+  const productExists = await Product.findOne({ category: id });
+  if (productExists) {
+    throw new ApiError(
+      "Cannot delete category that still has products",
+      400
+    );
+  }
+
+  const deleted = await Category.findByIdAndDelete(id);
+
+  if (!deleted) {
+    throw new ApiError("Category not found", 404);
+  }
+
+  return deleted;
 };
 
 // ============================================================
@@ -192,4 +237,13 @@ exports.getOrderDetails = async (orderId) => {
   const order = await Order.findById(orderId).populate("userId", "name email phone address");
   if (!order) throw new ApiError("Order not found", 404);
   return order;
+};
+
+
+exports.updateCategory = async (id, data) => {
+  return await Category.findByIdAndUpdate(
+    id,
+    data,
+    { new: true }
+  );
 };

@@ -136,4 +136,73 @@ class AdminApi {
       return false;
     }
   }
+  // ======================================================
+// 4. CATEGORY MANAGEMENT
+// ======================================================
+
+Future<List<dynamic>> getAllCategories() async {
+  try {
+    final res = await _dio.get('/admin/categories');
+
+    if (res.data['ok'] == true || res.statusCode == 200) {
+      final rawData = res.data['data'];
+
+      if (rawData is List) return rawData;
+
+      if (rawData is Map) {
+        if (rawData.containsKey('docs')) return rawData['docs'];
+        if (rawData.containsKey('data')) return rawData['data'];
+        if (rawData.containsKey('items')) return rawData['items'];
+      }
+    }
+
+    return [];
+  } catch (e) {
+    print("Lỗi API getAllCategories: $e");
+    return [];
+  }
+}
+
+Future<bool> createCategory(Map<String, dynamic> data) async {
+  try {
+    final res = await _dio.post(
+      '/admin/categories',
+      data: data,
+    );
+
+    return res.data['ok'] == true ||
+        res.statusCode == 200 ||
+        res.statusCode == 201;
+  } catch (e) {
+    print("Lỗi API createCategory: $e");
+    return false;
+  }
+}
+
+Future<bool> updateCategory(
+    String id, Map<String, dynamic> data) async {
+  try {
+    final res =
+        await _dio.put('/admin/categories/$id', data: data);
+
+    return res.data['ok'] == true ||
+        res.statusCode == 200;
+  } catch (e) {
+    print("Lỗi API updateCategory: $e");
+    return false;
+  }
+}
+
+Future<bool> deleteCategory(String id) async {
+  try {
+    final res =
+        await _dio.delete('/admin/categories/$id');
+
+    return res.data['ok'] == true ||
+        res.statusCode == 200;
+  } catch (e) {
+    print("Lỗi API deleteCategory: $e");
+    return false;
+  }
+}
 }

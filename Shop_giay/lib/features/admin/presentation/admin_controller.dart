@@ -11,11 +11,23 @@ class AdminController extends ChangeNotifier {
   List<dynamic> products = [];
   List<dynamic> _allProducts = [];
 
+  // ================= CATEGORY =================
+  List<dynamic> _categories = [];
+  bool _isLoadingCategories = false;
+
+  List<dynamic> get categories => _categories;
+  bool get isLoadingCategories => _isLoadingCategories;
+
   bool isLoading = false;
   String? error;
 
   void _setLoading(bool val) {
     isLoading = val;
+    notifyListeners();
+  }
+
+  void _setCategoryLoading(bool val) {
+    _isLoadingCategories = val;
     notifyListeners();
   }
 
@@ -63,15 +75,12 @@ class AdminController extends ChangeNotifier {
   }
 
   // ================= PRODUCTS =================
-
   Future<void> loadProducts() async {
     _setLoading(true);
     try {
       final data = await _api.getAllProducts();
-
       _allProducts = List.from(data);
       products = List.from(data);
-
       error = null;
     } catch (e) {
       error = "Lỗi tải sản phẩm: $e";
@@ -80,7 +89,6 @@ class AdminController extends ChangeNotifier {
     }
   }
 
-  // 🔥 SEARCH REALTIME
   void searchProducts(String keyword) {
     if (keyword.isEmpty) {
       products = List.from(_allProducts);
@@ -90,21 +98,14 @@ class AdminController extends ChangeNotifier {
         return name.contains(keyword.toLowerCase());
       }).toList();
     }
-
     notifyListeners();
   }
 
-  // ================= CREATE PRODUCT =================
   Future<bool> createProduct(Map<String, dynamic> data) async {
     try {
       _setLoading(true);
-
       bool success = await _api.createProduct(data);
-
-      if (success) {
-        await loadProducts();
-      }
-
+      if (success) await loadProducts();
       return success;
     } catch (e) {
       return false;
@@ -113,19 +114,11 @@ class AdminController extends ChangeNotifier {
     }
   }
 
-  // ================= UPDATE PRODUCT =================
-  Future<bool> updateProduct(
-      String id, Map<String, dynamic> data) async {
+  Future<bool> updateProduct(String id, Map<String, dynamic> data) async {
     try {
       _setLoading(true);
-
-      bool success =
-          await _api.updateProduct(id, data);
-
-      if (success) {
-        await loadProducts();
-      }
-
+      bool success = await _api.updateProduct(id, data);
+      if (success) await loadProducts();
       return success;
     } catch (e) {
       return false;
@@ -134,20 +127,60 @@ class AdminController extends ChangeNotifier {
     }
   }
 
-  // ================= DELETE PRODUCT =================
   Future<bool> deleteProduct(String id) async {
     try {
       bool success = await _api.deleteProduct(id);
-
       if (success) {
         _allProducts.removeWhere((p) => p['_id'] == id);
         products.removeWhere((p) => p['_id'] == id);
         notifyListeners();
       }
-
       return success;
     } catch (e) {
       return false;
+    }
+  }
+
+  // ================= CATEGORY =================
+
+  Future<void> loadCategories() async {
+    _setCategoryLoading(true);
+    try {
+      _categories = await _api.getAllCategories();
+    } catch (e) {
+      debugPrint("Load categories error: $e");
+    } finally {
+      _setCategoryLoading(false);
+    }
+  }
+
+  Future<bool> createCategory(Map<String, dynamic> data) async {
+    try {
+      bool success = await _api.createCategory(data);
+      if (success) await loadCategories();
+      return success;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateCategory(
+      String id, Map<String, dynamic> data) async {
+    try {
+      bool success = await _api.updateCategory(id, data);
+      if (success) await loadCategories();
+      return success;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> deleteCategory(String id) async {
+    try {
+      bool success = await _api.deleteCategory(id);
+      if (success) await loadCategories();
+    } catch (e) {
+      debugPrint("Delete category error: $e");
     }
   }
 }

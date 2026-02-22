@@ -8,7 +8,7 @@ import '../presentation/admin_dashboard_screen.dart';
 import '../presentation/products_manage_screen.dart'; // File có thật trong ảnh
 import '../presentation/comments_manage_screen.dart'; // File có thật trong ảnh
 import '../presentation/orders_manage_screen.dart';   // File có thật trong ảnh
-
+import '../presentation/categories_manage_screen.dart';
 class AdminDrawer extends StatelessWidget {
   const AdminDrawer({super.key});
 
@@ -78,15 +78,18 @@ class AdminDrawer extends StatelessWidget {
                 ),
                 
                 _buildMenuItem(
-                  context,
-                  icon: Icons.category_outlined,
-                  title: "Quản lý Danh mục",
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Chưa thấy file category trong ảnh nên tạm comment
-                    // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const CategoriesManageScreen()));
-                  },
-                ),
+  context,
+  icon: Icons.category_outlined,
+  title: "Quản lý Danh mục",
+  onTap: () {
+    Navigator.pop(context);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => const CategoriesManageScreen(),
+      ),
+    );
+  },
+),
                 
                 _buildMenuItem(
                   context,

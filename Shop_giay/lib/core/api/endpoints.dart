@@ -19,6 +19,7 @@ class Endpoints {
   static const String vnpay = "/orders/vnpay";
   //Admin
   static const adminStats = '/admin/stats'; 
+  static const String categories = "/categories";
 
 }
 
