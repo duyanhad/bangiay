@@ -6,7 +6,7 @@ const rateLimit = require("express-rate-limit");
 
 const routes = require("./routes");
 const { notFound, errorHandler } = require("./middlewares/error.middleware");
-
+const path = require("path"); 
 const app = express();
 
 app.use(helmet());
@@ -27,7 +27,8 @@ app.use("/api/v1/auth", rateLimit({
 }));
 
 app.get("/", (req, res) => res.json({ ok: true, data: "Shoe Shop API" }));
-
+// ⭐ MỞ PUBLIC FOLDER UPLOADS
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/api/v1", routes);
 
 app.use(notFound);

@@ -103,21 +103,20 @@ exports.deleteCategory = asyncHandler(async (req, res) => {
 // ======================================================
 exports.getOrders = asyncHandler(async (req, res) => {
   const { page, limit, status } = req.query;
-
-  ok(
-    res,
-    await adminSvc.getAllOrders(
-      Number(page) || 1,
-      Number(limit) || 10,
+  ok(res, await adminSvc.getAllOrders(
+      Number(page) || 1, 
+      Number(limit) || 20, // ✅ Cố định 20 đơn 1 lần
       status
-    )
-  );
+  ));
 });
 
 exports.getOrderDetails = asyncHandler(async (req, res) => {
   ok(res, await adminSvc.getOrderDetails(req.params.id));
 });
-
+exports.getProducts = asyncHandler(async (req, res) => {
+  const products = await adminSvc.getAllProductsAdmin();
+  ok(res, products);
+});
 exports.updateOrderStatus = asyncHandler(async (req, res) => {
   ok(
     res,

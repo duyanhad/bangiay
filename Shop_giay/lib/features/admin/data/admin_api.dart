@@ -18,11 +18,27 @@ class AdminApi {
   // ======================================================
   // 2. ORDERS MANAGEMENT
   // ======================================================
-  Future<List<dynamic>> getAllOrders() async {
+  
+  // ✅ ĐÃ SỬA: Thêm cặp ngoặc nhọn {} bao quanh các tham số
+  Future<dynamic> getAllOrders({int page = 1, int limit = 20, String? status}) async {
     try {
-      final res = await _dio.get('/admin/orders');
+      // Đóng gói các tham số để gửi lên URL Backend
+      Map<String, dynamic> queryParams = {
+        'page': page,
+        'limit': limit,
+      };
+      
+      // Nếu có lọc trạng thái (và khác 'All') thì mới gửi lên server
+      if (status != null && status != 'All' && status.isNotEmpty) {
+        queryParams['status'] = status;
+      }
 
-      if (res.data['ok'] == true) {
+      final res = await _dio.get(
+        '/admin/orders',
+        queryParameters: queryParams,
+      );
+
+      if (res.data['ok'] == true || res.statusCode == 200) {
         final rawData = res.data['data'];
 
         if (rawData is List) return rawData;
@@ -33,12 +49,15 @@ class AdminApi {
           if (rawData.containsKey('data')) return rawData['data'];
           if (rawData.containsKey('items')) return rawData['items'];
         }
+        
+        // Trả về thẳng rawData nếu backend trả về object chứa phân trang
+        return rawData; 
       }
 
       return [];
     } catch (e) {
       print("Lỗi API getAllOrders: $e");
-      rethrow;
+      return [];
     }
   }
 
@@ -65,14 +84,13 @@ class AdminApi {
   Future<List<dynamic>> getAllProducts({String? search}) async {
     try {
       final res = await _dio.get(
-        Endpoints.products,
+        '/admin/products', 
         queryParameters: {
           if (search != null && search.isNotEmpty) 'search': search,
         },
       );
 
-      if (res.data['ok'] == true ||
-          res.statusCode == 200) {
+      if (res.data['ok'] == true || res.statusCode == 200) {
         final rawData = res.data['data'];
 
         if (rawData is List) return rawData;
@@ -92,8 +110,7 @@ class AdminApi {
   }
 
   /// CREATE PRODUCT
-  Future<bool> createProduct(
-      Map<String, dynamic> data) async {
+  Future<bool> createProduct(Map<String, dynamic> data) async {
     try {
       final res = await _dio.post(
         Endpoints.products,
@@ -110,8 +127,7 @@ class AdminApi {
   }
 
   /// UPDATE PRODUCT
-  Future<bool> updateProduct(
-      String id, Map<String, dynamic> data) async {
+  Future<bool> updateProduct(String id, Map<String, dynamic> data) async {
     try {
       final res = await _dio.patch('${Endpoints.products}/$id', data: data);
 
@@ -126,8 +142,7 @@ class AdminApi {
   /// DELETE PRODUCT
   Future<bool> deleteProduct(String id) async {
     try {
-      final res =
-          await _dio.delete('${Endpoints.products}/$id');
+      final res = await _dio.delete('${Endpoints.products}/$id');
 
       return res.data['ok'] == true ||
           res.statusCode == 200;
@@ -136,73 +151,71 @@ class AdminApi {
       return false;
     }
   }
+  
   // ======================================================
-// 4. CATEGORY MANAGEMENT
-// ======================================================
+  // 4. CATEGORY MANAGEMENT
+  // ======================================================
 
-Future<List<dynamic>> getAllCategories() async {
-  try {
-    final res = await _dio.get('/admin/categories');
+  Future<List<dynamic>> getAllCategories() async {
+    try {
+      final res = await _dio.get('/admin/categories');
 
-    if (res.data['ok'] == true || res.statusCode == 200) {
-      final rawData = res.data['data'];
+      if (res.data['ok'] == true || res.statusCode == 200) {
+        final rawData = res.data['data'];
 
-      if (rawData is List) return rawData;
+        if (rawData is List) return rawData;
 
-      if (rawData is Map) {
-        if (rawData.containsKey('docs')) return rawData['docs'];
-        if (rawData.containsKey('data')) return rawData['data'];
-        if (rawData.containsKey('items')) return rawData['items'];
+        if (rawData is Map) {
+          if (rawData.containsKey('docs')) return rawData['docs'];
+          if (rawData.containsKey('data')) return rawData['data'];
+          if (rawData.containsKey('items')) return rawData['items'];
+        }
       }
+
+      return [];
+    } catch (e) {
+      print("Lỗi API getAllCategories: $e");
+      return [];
     }
-
-    return [];
-  } catch (e) {
-    print("Lỗi API getAllCategories: $e");
-    return [];
   }
-}
 
-Future<bool> createCategory(Map<String, dynamic> data) async {
-  try {
-    final res = await _dio.post(
-      '/admin/categories',
-      data: data,
-    );
+  Future<bool> createCategory(Map<String, dynamic> data) async {
+    try {
+      final res = await _dio.post(
+        '/admin/categories',
+        data: data,
+      );
 
-    return res.data['ok'] == true ||
-        res.statusCode == 200 ||
-        res.statusCode == 201;
-  } catch (e) {
-    print("Lỗi API createCategory: $e");
-    return false;
+      return res.data['ok'] == true ||
+          res.statusCode == 200 ||
+          res.statusCode == 201;
+    } catch (e) {
+      print("Lỗi API createCategory: $e");
+      return false;
+    }
   }
-}
 
-Future<bool> updateCategory(
-    String id, Map<String, dynamic> data) async {
-  try {
-    final res =
-        await _dio.put('/admin/categories/$id', data: data);
+  Future<bool> updateCategory(String id, Map<String, dynamic> data) async {
+    try {
+      final res = await _dio.put('/admin/categories/$id', data: data);
 
-    return res.data['ok'] == true ||
-        res.statusCode == 200;
-  } catch (e) {
-    print("Lỗi API updateCategory: $e");
-    return false;
+      return res.data['ok'] == true ||
+          res.statusCode == 200;
+    } catch (e) {
+      print("Lỗi API updateCategory: $e");
+      return false;
+    }
   }
-}
 
-Future<bool> deleteCategory(String id) async {
-  try {
-    final res =
-        await _dio.delete('/admin/categories/$id');
+  Future<bool> deleteCategory(String id) async {
+    try {
+      final res = await _dio.delete('/admin/categories/$id');
 
-    return res.data['ok'] == true ||
-        res.statusCode == 200;
-  } catch (e) {
-    print("Lỗi API deleteCategory: $e");
-    return false;
+      return res.data['ok'] == true ||
+          res.statusCode == 200;
+    } catch (e) {
+      print("Lỗi API deleteCategory: $e");
+      return false;
+    }
   }
-}
 }

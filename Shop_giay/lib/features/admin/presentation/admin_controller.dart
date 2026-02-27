@@ -45,10 +45,30 @@ class AdminController extends ChangeNotifier {
   }
 
   // ================= ORDERS =================
-  Future<void> loadOrders() async {
+  // ✅ 3 BIẾN QUẢN LÝ PHÂN TRANG
+  int _currentPage = 1;
+  bool hasMore = true; 
+  bool isLoadingMore = false;
+
+  // HÀM TẢI LẦN ĐẦU / LÀM MỚI (Hỗ trợ lọc trạng thái)
+  Future<void> loadOrders({String? status}) async {
+    _currentPage = 1;
+    hasMore = true;
     _setLoading(true);
+    
     try {
-      orders = await _api.getAllOrders();
+      // Gọi API tải trang 1 và truyền kèm trạng thái lọc
+      final data = await _api.getAllOrders(page: _currentPage, limit: 20, status: status);
+      
+      // Đề phòng API trả về Map {orders: [], total: ...} thay vì List thuần
+      List<dynamic> fetchedOrders = data is Map ? data['orders'] ?? [] : data;
+
+      orders = List.from(fetchedOrders);
+      
+      // Nếu số đơn lấy về nhỏ hơn 20 -> Đã hết đơn hàng
+      if (fetchedOrders.length < 20) {
+        hasMore = false;
+      }
       error = null;
     } catch (e) {
       error = "Lỗi tải đơn hàng: $e";
@@ -57,6 +77,37 @@ class AdminController extends ChangeNotifier {
     }
   }
 
+  // HÀM TẢI THÊM ĐƠN KHI VUỐT CHẠM ĐÁY (Hỗ trợ lọc trạng thái)
+  Future<void> loadMoreOrders({String? status}) async { 
+    // Nếu đang tải dở hoặc đã hết đơn thì không gọi API nữa
+    if (isLoadingMore || !hasMore) return;
+
+    isLoadingMore = true;
+    _currentPage++;
+    notifyListeners(); // Hiện vòng xoay loading ở đáy danh sách
+
+    try {
+      // Gọi API tải trang tiếp theo (vẫn giữ trạng thái đang lọc)
+      final data = await _api.getAllOrders(page: _currentPage, limit: 20, status: status);
+      List<dynamic> fetchedOrders = data is Map ? data['orders'] ?? [] : data;
+
+      if (fetchedOrders.isEmpty || fetchedOrders.length < 20) {
+        hasMore = false; // Đã đến trang cuối
+      }
+
+      // Nối thêm đơn hàng mới vào cuối danh sách hiện tại
+      orders.addAll(fetchedOrders);
+      error = null;
+    } catch (e) {
+      error = "Lỗi tải thêm đơn hàng: $e";
+      _currentPage--; // Lỗi thì lùi lại trang cũ để vuốt lại
+    } finally {
+      isLoadingMore = false;
+      notifyListeners(); // Tắt vòng xoay loading
+    }
+  }
+
+  // HÀM UPDATE STATUS
   Future<bool> updateStatus(String id, String status) async {
     try {
       bool success = await _api.updateOrderStatus(id, status);

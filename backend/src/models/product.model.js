@@ -8,6 +8,8 @@ const ProductSchema = new mongoose.Schema({
   discount: { type: Number, default: 0 },
   final_price: { type: Number, default: 0 },
   images: [{ type: String }],
+  image_url: { type: String, default: "" },
+  image: { type: String, default: "" },
   description: { type: String, default: "" },
 
   // ✅ 1. BẮT BUỘC PHẢI CÓ 'stock' (Tổng tồn kho của tất cả các size)

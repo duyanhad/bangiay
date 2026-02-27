@@ -22,5 +22,5 @@ router.delete("/categories/:id", c.deleteCategory);
 router.get("/orders", c.getOrders); // ?page=1&status=pending
 router.get("/orders/:id", c.getOrderDetails);
 router.put("/orders/:id/status", c.updateOrderStatus);
-
+router.get("/products", c.getProducts);
 module.exports = router;

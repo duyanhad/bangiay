@@ -15,7 +15,7 @@ async function create(userId, payload) {
   console.log("--- DEBUG: Bắt đầu tạo đơn hàng ---");
 
   // 1. Lấy dữ liệu
-  const items = payload.items;
+  const items = payload.items || payload.cartItems || payload.products;
   const name = payload.name || payload.fullName || payload.receiverName;
   const phone = payload.phone || payload.phoneNumber || payload.phone_number;
   const address = payload.address || payload.shippingAddress;
@@ -56,14 +56,31 @@ async function create(userId, payload) {
     const itemPrice = product.final_price || product.price;
     total += itemPrice * quantity;
 
-    normalizedItems.push({
-      productId: product._id,
-      name: product.name,
-      image: product.thumb || (product.images && product.images[0]) || "",
-      size: String(size),
-      qty: quantity,
-      price: itemPrice
-    });
+    // 🔥 Lấy filename ảnh
+// 🔥 Lấy filename ảnh (Lấy đúng trường từ database)
+    const filename = product.image_url || product.image || product.thumb || (product.images && product.images[0]) || "";
+    
+    // 🔥 Convert thành FULL URL CHUẨN XÁC
+    const baseUrl = process.env.BASE_URL || "http://192.168.1.100:8080";
+    let imageUrl = "";
+
+    if (filename.startsWith("http")) {
+      imageUrl = filename; // Nếu là link web thì giữ nguyên
+    } else if (filename) {
+      imageUrl = `${baseUrl}/uploads/${filename}`; // Nếu là tên file cục bộ thì mới nối thêm upload/
+    }
+
+    // 🔴 THÊM DÒNG LOG NÀY ĐỂ BẮT TẬN TAY KẺ GÂY LỖI:
+    console.log(`[DEBUG ẢNH] Sản phẩm: ${product.name} | Gốc: '${filename}' ---> Sẽ lưu vào đơn: '${imageUrl}'`);
+
+normalizedItems.push({
+  productId: product._id,
+  name: product.name,
+  image: imageUrl,
+  size: String(size),
+  qty: quantity,
+  price: itemPrice
+});
 
     // --- 🔥 TRỪ KHO (Giữ hàng) ---
     // SỬA: Bỏ dòng soldCount ở đây đi
@@ -211,7 +228,8 @@ async function updateStatus(id, status) {
       }
   }
   
-  return newOrder;
+ const orderWithImage = await attachImages([newOrder]);
+  return orderWithImage[0];
 }
 
 // --- Helper Functions ---
@@ -236,25 +254,60 @@ async function decreaseSoldCount(order) {
 
 // 🔥 3. Hàm hoàn kho (Chỉ trả lại Stock, không đụng vào soldCount)
 async function restoreStockOnly(order) {
-  for(const item of order.items) {
-      let updateQuery = { $inc: { stock: item.qty } }; // Cộng lại stock tổng
-      
-      if (item.size) {
-         updateQuery.$inc[`size_stocks.${item.size}`] = item.qty; // Cộng lại stock size
-      }
-      
-      await Product.findByIdAndUpdate(item.productId, updateQuery);
+  for (const item of order.items) {
+    let updateQuery = { $inc: { stock: item.qty } };
+
+    if (item.size) {
+      updateQuery.$inc[`size_stocks.${item.size}`] = item.qty;
+    }
+
+    await Product.findByIdAndUpdate(item.productId, updateQuery);
   }
-}
+} 
 
 // --- Các hàm cơ bản khác ---
+// 🔥 GẮN ẢNH CHO ĐƠN CŨ
+async function attachImages(orders) {
+  const baseUrl = process.env.BASE_URL || "http://192.168.1.100:8080";
 
+  // ✅ THÊM DÒNG NÀY: Ép Mongoose Document về Object thuần để cho phép sửa đổi dữ liệu
+  const parsedOrders = orders.map(order => 
+    order.toObject ? order.toObject() : order
+  );
+
+  // Lưu ý: Đổi chữ 'orders' thành 'parsedOrders' ở vòng lặp
+  for (const order of parsedOrders) {
+    for (const item of order.items) {
+      if (item.image && item.image.startsWith("http")) continue;
+
+      const product = await Product.findById(item.productId);
+      if (product) {
+        const filename = product.image_url || product.image || product.thumb || (product.images && product.images[0]) || "";
+
+        if (filename.startsWith("http")) {
+          item.image = filename;
+        } else if (filename) {
+          item.image = `${baseUrl}/uploads/${filename}`;
+        } else {
+          item.image = "";
+        }
+      }
+    }
+  }
+
+  // ✅ SỬA DÒNG NÀY: Trả về mảng đã được ép kiểu
+  return parsedOrders; 
+}
 async function myOrders(userId) {
-  return await Order.find({ userId }).sort({ createdAt: -1 });
+  const orders = await Order.find({ userId }).sort({ createdAt: -1 });
+
+  return await attachImages(orders);
 }
 
 async function listAll() {
-  return await Order.find().sort({ createdAt: -1 });
+  const orders = await Order.find().sort({ createdAt: -1 });
+
+  return await attachImages(orders);
 }
 
 function sortObject(obj) {

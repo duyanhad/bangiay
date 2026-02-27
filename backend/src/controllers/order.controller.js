@@ -5,10 +5,17 @@ const svc = require("../services/order.service");
 
 // ===== CREATE ORDER =====
 exports.create = asyncHandler(async (req, res) => {
+
+  console.log("========= CREATE ORDER DEBUG =========");
+  console.log("USER ID:", req.user?.id);
+  console.log("BODY:", JSON.stringify(req.body, null, 2));
+
   const result = await svc.create(req.user.id, req.body);
+
+  console.log("✅ ORDER CREATED:", result._id);
+
   ok(res, result);
 });
-
 // ===== USER ORDERS =====
 exports.myOrders = asyncHandler(async (req, res) => {
   const result = await svc.myOrders(req.user.id);

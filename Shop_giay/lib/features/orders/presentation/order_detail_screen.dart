@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import 'package:flutter/foundation.dart';
 // ✅ SỬ DỤNG APP CONFIG
 import '../../../core/config/app_config.dart';
 
@@ -10,20 +10,21 @@ class OrderDetailScreen extends StatelessWidget {
 
   // --- HÀM XỬ LÝ ẢNH CHUẨN ---
   String _getValidImageUrl(String? path) {
-    if (path == null || path.isEmpty) return "";
-    if (path.startsWith('http')) return path;
+  if (path == null || path.isEmpty) return "";
+  if (path.startsWith('http')) return path;
 
-    String base = AppConfig.baseUrl;
+  String base = AppConfig.baseUrl;
 
-    if (base.contains('localhost')) {
-      base = base.replaceFirst('localhost', '10.0.2.2');
-    }
-
-    if (base.endsWith('/')) base = base.substring(0, base.length - 1);
-    String cleanPath = path.startsWith('/') ? path : '/$path';
-
-    return "$base$cleanPath";
+  // CHỈ đổi localhost khi chạy ANDROID
+  if (!kIsWeb && base.contains('localhost')) {
+    base = base.replaceFirst('localhost', '10.0.2.2');
   }
+
+  if (base.endsWith('/')) base = base.substring(0, base.length - 1);
+  String cleanPath = path.startsWith('/') ? path : '/$path';
+
+  return "$base$cleanPath";
+}
 
   // --- HÀM FORMAT TIỀN TỆ ---
   String _formatCurrency(dynamic price) {
@@ -103,7 +104,22 @@ class OrderDetailScreen extends StatelessWidget {
                     const Center(child: Text("Không có sản phẩm nào", style: TextStyle(fontStyle: FontStyle.italic))),
                   
                   ...items.map((item) {
-                    String imgUrl = _getValidImageUrl(item['image']);
+                     String imgUrl = "";
+
+  // Ưu tiên ảnh snapshot trong Order
+  if (item['image'] != null && item['image'].toString().isNotEmpty) {
+    imgUrl = item['image'];
+  }
+
+  // Nếu không có thì lấy từ product populate
+  final product = item['product'];
+  if (imgUrl.isEmpty &&
+      product != null &&
+      product['images'] != null &&
+      product['images'] is List &&
+      product['images'].isNotEmpty) {
+    imgUrl = _getValidImageUrl(product['images'][0]);
+  }
 
                     return Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),

@@ -3,7 +3,7 @@ const Order = require("../models/order.model");
 const User = require("../models/user.model");
 const Category = require("../models/category.model");
 const { ApiError } = require("../utils/apiError");
-
+const orderService = require("./order.service");
 // ============================================================
 // --- 1. DASHBOARD & THỐNG KÊ (ĐÃ SỬA ĐỂ HIỆN LIST TRÊN APP) ---
 // ============================================================
@@ -207,7 +207,26 @@ exports.deleteCategory = async (id) => {
 // --- 4. QUẢN LÝ ĐƠN HÀNG (GIỮ NGUYÊN) ---
 // ============================================================
 
-exports.getAllOrders = async (page = 1, limit = 10, status) => {
+async function attachAdminImages(orders) {
+  const baseUrl = process.env.BASE_URL || "http://192.168.1.100:8080";
+  const parsedOrders = orders.map(order => order.toObject ? order.toObject() : order);
+
+  for (const order of parsedOrders) {
+    for (const item of order.items) {
+      if (item.image && item.image.startsWith("http")) continue;
+      const product = await Product.findById(item.productId);
+      if (product) {
+        const filename = product.image_url || product.image || product.thumb || (product.images && product.images[0]) || "";
+        if (filename.startsWith("http")) item.image = filename;
+        else if (filename) item.image = `${baseUrl}/uploads/${filename}`;
+        else item.image = "";
+      }
+    }
+  }
+  return parsedOrders;
+}
+
+exports.getAllOrders = async (page = 1, limit = 20, status) => {
   const query = {};
   if (status && status !== "all") query.status = status;
 
@@ -216,34 +235,35 @@ exports.getAllOrders = async (page = 1, limit = 10, status) => {
     Order.find(query)
       .populate("userId", "name email phone address") 
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit),
+      .skip(skip)   // ✅ Bật lại skip
+      .limit(limit),// ✅ Bật lại limit
     Order.countDocuments(query)
   ]);
 
-  return { orders, total, page, totalPages: Math.ceil(total / limit) };
+  const ordersWithImages = await attachAdminImages(orders);
+  return { orders: ordersWithImages, total, page, totalPages: Math.ceil(total / limit) };
 };
 
 exports.updateOrderStatus = async (orderId, status) => {
-  const allowed = ["pending", "confirmed", "shipping", "done", "cancelled"];
-  if (!allowed.includes(status)) throw new ApiError("Invalid status", 400);
-
-  const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
-  if (!order) throw new ApiError("Order not found", 404);
-  return order;
+  // ✅ FIX QUAN TRỌNG NHẤT: Trỏ sang hàm update xịn xò bên order.service
+  // Để tự động xử lý Trừ kho, Cộng lượt bán và Gắn ảnh!
+  return await orderService.updateStatus(orderId, status);
 };
 
 exports.getOrderDetails = async (orderId) => {
   const order = await Order.findById(orderId).populate("userId", "name email phone address");
   if (!order) throw new ApiError("Order not found", 404);
-  return order;
+  
+  // ✅ FIX: Gắn ảnh khi Admin bấm vào xem chi tiết
+  const orderWithImage = await attachAdminImages([order]);
+  return orderWithImage[0];
 };
+// ============================================================
+// --- 5. QUẢN LÝ SẢN PHẨM ADMIN ---
+// ============================================================
 
-
-exports.updateCategory = async (id, data) => {
-  return await Category.findByIdAndUpdate(
-    id,
-    data,
-    { new: true }
-  );
+exports.getAllProductsAdmin = async () => {
+  return await Product.find()
+    .populate("category", "name")
+    .sort({ createdAt: -1 });
 };

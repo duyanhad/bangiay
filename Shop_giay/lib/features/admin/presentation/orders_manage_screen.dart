@@ -17,6 +17,13 @@ class _OrdersManageScreenState extends State<OrdersManageScreen> {
   String _selectedStatus = 'All'; // Trạng thái đang được lọc
   bool _isNewestFirst = true; // Cờ sắp xếp theo ngày
 
+  // ✅ Khai báo ScrollController để theo dõi thao tác vuốt
+  final ScrollController _scrollController = ScrollController();
+  
+  // ✅ THÊM: Khai báo bộ điều khiển cho thanh tìm kiếm
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   // Danh sách các tab lọc
   final List<Map<String, String>> _statusFilters = [
     {'value': 'All', 'label': 'Tất cả'},
@@ -31,15 +38,46 @@ class _OrdersManageScreenState extends State<OrdersManageScreen> {
   void initState() {
     super.initState();
     Future.microtask(() => context.read<AdminController>().loadOrders());
+
+    // Lắng nghe thao tác vuốt, nếu vuốt gần chạm đáy thì gọi tải thêm
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 50) {
+        context.read<AdminController>().loadMoreOrders(status: _selectedStatus);
+      }
+    });
   }
 
-  // Lấy ra danh sách đơn hàng đã được LỌC và SẮP XẾP
+  // Thêm hàm dispose để hủy ScrollController và SearchController khi thoát màn hình
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose(); // ✅ THÊM: Giải phóng RAM của ô tìm kiếm
+    super.dispose();
+  }
+
+  // Lấy ra danh sách đơn hàng đã được LỌC, TÌM KIẾM và SẮP XẾP
   List<dynamic> _getFilteredAndSortedOrders(List<dynamic> allOrders) {
-    List<dynamic> filtered = allOrders;
+    // Dùng List.from() để tạo một bản sao độc lập, không làm hỏng list gốc
+    List<dynamic> filtered = List.from(allOrders);
 
     // 1. Lọc theo trạng thái
     if (_selectedStatus != 'All') {
-      filtered = filtered.where((o) => o['status'] == _selectedStatus).toList();
+      filtered = filtered.where((o) => 
+          o['status'].toString().toLowerCase() == _selectedStatus.toLowerCase()
+      ).toList();
+    }
+
+    // ✅ THÊM: Lọc theo từ khóa tìm kiếm (Mã đơn, Tên khách, Số điện thoại)
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      filtered = filtered.where((o) {
+        final id = o['_id']?.toString().toLowerCase() ?? '';
+        final name = o['name']?.toString().toLowerCase() ?? '';
+        final phone = o['phone']?.toString().toLowerCase() ?? '';
+        
+        // Nếu query khớp một phần với Mã đơn, Tên, hoặc SĐT thì giữ lại
+        return id.contains(query) || name.contains(query) || phone.contains(query);
+      }).toList();
     }
 
     // 2. Sắp xếp theo ngày (createdAt)
@@ -82,13 +120,19 @@ class _OrdersManageScreenState extends State<OrdersManageScreen> {
               onPressed: () => Navigator.pop(ctx),
               child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
             ),
-            ElevatedButton(
+           ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AdminColors.header1),
               onPressed: () async {
                 Navigator.pop(ctx);
                 // Gọi hàm update từ controller
                 final success = await context.read<AdminController>().updateStatus(orderId, newStatus);
+                
                 if (mounted) {
+                  // Ép App tải lại toàn bộ đơn hàng từ Database để đồng bộ cấu trúc
+                  if (success) {
+                    await context.read<AdminController>().loadOrders();
+                  }
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(success ? "Cập nhật thành công!" : "Cập nhật thất bại!"),
@@ -133,7 +177,41 @@ class _OrdersManageScreenState extends State<OrdersManageScreen> {
       ),
       body: Column(
         children: [
-          // THANH LỌC TRẠNG THÁI (Ngay dưới AppBar)
+          // ✅ THÊM: GIAO DIỆN THANH TÌM KIẾM
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Tìm mã đơn, tên, SĐT...',
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                suffixIcon: _searchQuery.isNotEmpty 
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.grey),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() { _searchQuery = ''; });
+                      },
+                    )
+                  : null,
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.trim();
+                });
+              },
+            ),
+          ),
+
+          // THANH LỌC TRẠNG THÁI
           Container(
             height: 50,
             color: Colors.white,
@@ -174,9 +252,22 @@ class _OrdersManageScreenState extends State<OrdersManageScreen> {
                   : displayOrders.isEmpty
                       ? const Center(child: Text("Không có đơn hàng nào!"))
                       : ListView.builder(
+                          // Gắn cái ống nghe vuốt vào ListView
+                          controller: _scrollController, 
                           padding: const EdgeInsets.all(10),
-                          itemCount: displayOrders.length,
+                          
+                          // Tăng itemCount thêm 1 nếu đang load, để chừa chỗ vẽ vòng xoay ở đáy
+                          itemCount: displayOrders.length + (controller.isLoadingMore ? 1 : 0),
+                          
                           itemBuilder: (context, index) {
+                            // Nếu chạy đến index cuối cùng (vị trí dư ra) -> Vẽ cục Loading
+                            if (index == displayOrders.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 20),
+                                child: Center(child: CircularProgressIndicator()),
+                              );
+                            }
+
                             final order = displayOrders[index];
                             return _buildOrderCard(context, order);
                           },
@@ -207,16 +298,23 @@ class _OrdersManageScreenState extends State<OrdersManageScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+             Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Mã đơn: ${order['_id']?.toString().substring(18).toUpperCase() ?? '...'}",
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  // Kiểm tra độ dài an toàn trước khi dùng substring để tránh lỗi RangeError
+                  Text(
+                    "Mã đơn: ${(order['_id'] != null && order['_id'].toString().length >= 6) ? order['_id'].toString().substring(order['_id'].toString().length - 6).toUpperCase() : (order['_id'] ?? 'LỖI MÃ')}",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                   
                   // BẤM VÀO CHIP NÀY ĐỂ ĐỔI TRẠNG THÁI
                   GestureDetector(
-                    onTap: () => _showUpdateStatusDialog(context, order['_id'], order['status']),
-                    child: _buildStatusChip(order['status'] ?? 'pending'),
+                    onTap: () => _showUpdateStatusDialog(
+                        context, 
+                        order['_id']?.toString() ?? '', 
+                        order['status']?.toString() ?? 'pending'
+                    ),
+                    child: _buildStatusChip(order['status']?.toString() ?? 'pending'),
                   ),
                 ],
               ),
@@ -228,10 +326,25 @@ class _OrdersManageScreenState extends State<OrdersManageScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Ngày đặt: ${order['createdAt'] != null ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(order['createdAt']).toLocal()) : '...'}",
-                       style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                  // Dùng tryParse thay vì parse để chống Crash App nếu ngày bị lỗi
                   Text(
-                    NumberFormat.currency(locale: 'vi', symbol: '₫').format(order['total'] ?? 0),
+                    "Ngày đặt: ${() {
+                      try {
+                        return order['createdAt'] != null 
+                            ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(order['createdAt'].toString()).toLocal()) 
+                            : '...';
+                      } catch (e) {
+                        return 'Không rõ';
+                      }
+                    }()}",
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  
+                  // Ép về double trước khi format tiền để chống lỗi chuỗi String
+                  Text(
+                    NumberFormat.currency(locale: 'vi', symbol: '₫').format(
+                        double.tryParse(order['total']?.toString() ?? '0') ?? 0
+                    ),
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16),
                   ),
                 ],
