@@ -7,4 +7,5 @@ router.use("/comments", require("./comment.route"));
 router.use("/admin", require("./admin.route"));
 router.use("/cart", require("./cart.route"));
 router.use("/categories", require("./category.routes"));
+router.use("/upload", require("./upload.route"));
 module.exports = router;
