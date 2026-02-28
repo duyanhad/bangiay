@@ -8,7 +8,8 @@ class Endpoints {
   static const authProfile = '/auth/profile';
   static const authChangePassword = '/auth/change-password';
   static const authUpdateProfile = '/auth/update-profile'; 
-
+static const String comments = "/comments";
+  static const String uploadImages = "/upload";
  //cart
     static const String cart = "/cart";
   static const String cartAdd = "/cart/add";

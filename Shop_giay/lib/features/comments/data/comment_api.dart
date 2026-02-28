@@ -1,34 +1,33 @@
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart'; 
-
-import '../../../core/config/app_config.dart';
+import '../../../core/api/dio_client.dart'; // Sử dụng DioClient thay vì tạo Dio mới
 import '../domain/comment_model.dart';
 
 class CommentApi {
-  final Dio dio = Dio(BaseOptions(baseUrl: AppConfig.baseUrl));
+  // 🚩 SỬA: Dùng trực tiếp instance dio từ DioClient để thừa hưởng baseUrl và Interceptors (Token)
+  final Dio dio = DioClient.dio;
 
   // Lấy danh sách comment (Public)
   Future<List<Comment>> getComments(String productId) async {
     try {
-      final res = await dio.get('/api/v1/comments/product/$productId');
+      // 🚩 SỬA: Bỏ '/api/v1' vì trong DioClient đã có rồi
+      final res = await dio.get('/comments/product/$productId');
       
       final data = res.data['data'] as List;
       return data.map((e) => Comment.fromJson(e)).toList();
     } catch (e) {
-      throw Exception('Lỗi khi tải bình luận: $e');
+      rethrow;
     }
   }
 
-  // ✅ HÀM UPLOAD ẢNH: Đã sửa lỗi 404 và hỗ trợ Web/Mobile
+  // ✅ HÀM UPLOAD ẢNH
   Future<List<String>> uploadImages(List<XFile> images, String token) async {
-    
     try {
       FormData formData = FormData();
       
       for (XFile file in images) {
         final bytes = await file.readAsBytes();
         
-        // Sử dụng MapEntry để thêm nhiều file cùng key "images" như Server yêu cầu
         formData.files.add(MapEntry(
           "images", 
           MultipartFile.fromBytes(
@@ -38,16 +37,14 @@ class CommentApi {
         ));
       }
 
+      // 🚩 SỬA: Bỏ '/api/v1'
       final res = await dio.post(
-        '/api/v1/comments/upload', // 🚩 ĐÃ SỬA: Phải là /api/v1/comments/upload mới đúng route index.js và comment.route.js
+        '/comments/upload', 
         data: formData,
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'}, // Thêm token vì route này yêu cầu requireAuth
-        ),
+        // Không cần truyền header thủ công vì DioClient.dio đã tự động lấy token từ SecureStore
       );
       
       if (res.data['ok'] == true) {
-        // Backend trả về mảng ["/uploads/file.jpg", ...]
         return List<String>.from(res.data['data']);
       }
       return [];
@@ -59,18 +56,16 @@ class CommentApi {
     }
   }
 
-  // Thêm bình luận (Gửi kèm mảng images)
+  // Thêm bình luận
   Future<void> postComment(String productId, String content, List<String> images, String token) async {
     try {
+      // 🚩 SỬA: Bỏ '/api/v1'
       await dio.post(
-        '/api/v1/comments/product/$productId', 
+        '/comments/product/$productId', 
         data: {
           'content': content,
-          'images': images, // Gửi danh sách đường dẫn ảnh đã upload thành công
+          'images': images, 
         },
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {

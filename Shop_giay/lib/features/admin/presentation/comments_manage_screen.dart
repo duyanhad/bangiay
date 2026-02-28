@@ -16,7 +16,7 @@ class _CommentsManageScreenState extends State<CommentsManageScreen> {
     {
       "id": 1,
       "user": "Nguyễn Văn A",
-      "product": "iPhone 15 Pro Max",
+      "product": "giầy",
       "content": "Sản phẩm rất đẹp, giao hàng nhanh!",
       "rating": 5,
       "date": DateTime.now().subtract(const Duration(hours: 2)),
@@ -24,8 +24,8 @@ class _CommentsManageScreenState extends State<CommentsManageScreen> {
     {
       "id": 2,
       "user": "Trần Thị B",
-      "product": "Tai nghe Sony",
-      "content": "Nghe hơi bé, không đáng tiền.",
+      "product": "giầy",
+      "content": " không đáng tiền.",
       "rating": 3,
       "date": DateTime.now().subtract(const Duration(days: 1)),
     },
