@@ -23,4 +23,10 @@ router.get("/orders", c.getOrders); // ?page=1&status=pending
 router.get("/orders/:id", c.getOrderDetails);
 router.put("/orders/:id/status", c.updateOrderStatus);
 router.get("/products", c.getProducts);
+// Quản lý bình luận (Đã có middleware requireAdmin ở đầu file)
+router.get("/comments", c.getComments); // Lấy tất cả comment để quản lý
+router.patch("/comments/:id/reply", c.replyComment); // Admin rep
+router.patch("/comments/:id/hide", c.hideComment); // Ẩn/Hiện
+router.delete("/comments/:id", c.deleteComment); // Xóa vĩnh viễn
+
 module.exports = router;

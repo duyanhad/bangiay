@@ -109,7 +109,29 @@ exports.getOrders = asyncHandler(async (req, res) => {
       status
   ));
 });
+const commentSvc = require("../services/comment.service");
 
+exports.getComments = asyncHandler(async (req, res) => {
+  // Lấy tất cả bình luận (bao gồm cả bị ẩn) để admin quản lý
+  const comments = await commentSvc.listAll(req.query);
+  ok(res, comments);
+});
+
+exports.replyComment = asyncHandler(async (req, res) => {
+  const result = await commentSvc.reply(req.user.id, req.params.id, req.body.content);
+  ok(res, result);
+});
+
+exports.hideComment = asyncHandler(async (req, res) => {
+  const result = await commentSvc.hide(req.params.id, req.body.isHidden);
+  ok(res, result);
+});
+
+exports.deleteComment = asyncHandler(async (req, res) => {
+  const Comment = require("../models/comment.model");
+  await Comment.findByIdAndDelete(req.params.id);
+  ok(res, { message: "Xóa thành công" });
+});
 exports.getOrderDetails = asyncHandler(async (req, res) => {
   ok(res, await adminSvc.getOrderDetails(req.params.id));
 });

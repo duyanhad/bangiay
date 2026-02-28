@@ -112,7 +112,7 @@ class AdminController extends ChangeNotifier {
     try {
       bool success = await _api.updateOrderStatus(id, status);
       if (success) {
-        int index = orders.indexWhere((o) => o['_id'] == id);
+        int index = orders.indexWhere((o) => (o['_id'] ?? o['id']) == id);
         if (index != -1) {
           orders[index]['status'] = status;
           notifyListeners();
@@ -182,13 +182,84 @@ class AdminController extends ChangeNotifier {
     try {
       bool success = await _api.deleteProduct(id);
       if (success) {
-        _allProducts.removeWhere((p) => p['_id'] == id);
-        products.removeWhere((p) => p['_id'] == id);
+        _allProducts.removeWhere((p) => (p['_id'] ?? p['id']) == id);
+        products.removeWhere((p) => (p['_id'] ?? p['id']) == id);
         notifyListeners();
       }
       return success;
     } catch (e) {
       return false;
+    }
+  }
+
+  // ======================================================
+  // 4. COMMENTS MANAGEMENT (PHẦN CHUẨN)
+  // ======================================================
+  List<dynamic> _adminComments = [];
+  List<dynamic> get adminComments => _adminComments;
+
+  /// Tải danh sách tất cả bình luận từ Server
+  Future<void> loadAdminComments() async {
+    _setLoading(true);
+    try {
+      // Gọi API lấy toàn bộ comment
+      final res = await _api.getAllComments(); 
+      _adminComments = List.from(res);
+      error = null;
+    } catch (e) {
+      debugPrint("Lỗi tải bình luận: $e");
+      error = "Không thể tải bình luận";
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Trả lời bình luận
+  Future<bool> handleReply(String id, String content) async {
+    try {
+      bool success = await _api.replyComment(id, content);
+      if (success) {
+        // Sau khi rep thành công, cập nhật lại danh sách để hiện nội dung rep
+        await loadAdminComments(); 
+      }
+      return success;
+    } catch (e) {
+      debugPrint("Lỗi trả lời: $e");
+      return false;
+    }
+  }
+
+  /// Ẩn hoặc Hiện bình luận (Cập nhật UI tức thì)
+  Future<void> handleHide(String id, bool isHidden) async {
+    try {
+      // Sửa lỗi: AdminApi dùng toggleHideComment chứ không phải hideComment
+      bool success = await _api.toggleHideComment(id, isHidden);
+      if (success) {
+        // Tìm và cập nhật trực tiếp trong list để UI thay đổi ngay lập tức
+        int index = _adminComments.indexWhere((item) => (item['_id'] ?? item['id']) == id);
+        if (index != -1) {
+          _adminComments[index]['isHidden'] = isHidden;
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint("Lỗi ẩn/hiện: $e");
+    }
+  }
+
+  /// Xóa vĩnh viễn bình luận
+  Future<void> deleteComment(String id) async {
+    try {
+      bool success = await _api.deleteComment(id);
+      if (success) {
+        // Kiểm tra cả _id và id để xóa khỏi danh sách local
+        _adminComments.removeWhere((item) => 
+          (item['_id']?.toString() ?? item['id']?.toString()) == id
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Lỗi khi xóa bình luận: $e");
     }
   }
 
@@ -215,8 +286,7 @@ class AdminController extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateCategory(
-      String id, Map<String, dynamic> data) async {
+  Future<bool> updateCategory(String id, Map<String, dynamic> data) async {
     try {
       bool success = await _api.updateCategory(id, data);
       if (success) await loadCategories();

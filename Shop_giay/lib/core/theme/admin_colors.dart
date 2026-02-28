@@ -4,7 +4,7 @@ class AdminColors {
   static const header1 = Color(0xFF184E77);
   static const header2 = Color(0xFF1E6091);
   static const accent = Color(0xFF34A0A4);
-
+  static const header = Color(0xFF184E77);
   static const bg = Color(0xFFF5F8FA);
   static const text = Color(0xFF1F2A37);
   static const soft = Color(0xFF6B7280);

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart'; // Để dùng debugPrint
 import '../../../core/api/dio_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../data/admin_models.dart';
@@ -10,25 +11,26 @@ class AdminApi {
   // 1. DASHBOARD STATS
   // ======================================================
   Future<AdminStats> getStats() async {
-    final res = await _dio.get(Endpoints.adminStats);
-    final data = res.data['data'] as Map<String, dynamic>;
-    return AdminStats.fromJson(data);
+    try {
+      final res = await _dio.get(Endpoints.adminStats);
+      final data = res.data['data'] as Map<String, dynamic>;
+      return AdminStats.fromJson(data);
+    } catch (e) {
+      debugPrint("Lỗi API getStats: $e");
+      rethrow; // Ném lỗi để Controller xử lý hiển thị UI
+    }
   }
 
   // ======================================================
   // 2. ORDERS MANAGEMENT
   // ======================================================
-  
-  // ✅ ĐÃ SỬA: Thêm cặp ngoặc nhọn {} bao quanh các tham số
   Future<dynamic> getAllOrders({int page = 1, int limit = 20, String? status}) async {
     try {
-      // Đóng gói các tham số để gửi lên URL Backend
       Map<String, dynamic> queryParams = {
         'page': page,
         'limit': limit,
       };
       
-      // Nếu có lọc trạng thái (và khác 'All') thì mới gửi lên server
       if (status != null && status != 'All' && status.isNotEmpty) {
         queryParams['status'] = status;
       }
@@ -40,23 +42,18 @@ class AdminApi {
 
       if (res.data['ok'] == true || res.statusCode == 200) {
         final rawData = res.data['data'];
-
         if (rawData is List) return rawData;
-
         if (rawData is Map) {
           if (rawData.containsKey('docs')) return rawData['docs'];
           if (rawData.containsKey('orders')) return rawData['orders'];
           if (rawData.containsKey('data')) return rawData['data'];
           if (rawData.containsKey('items')) return rawData['items'];
+          return rawData;
         }
-        
-        // Trả về thẳng rawData nếu backend trả về object chứa phân trang
-        return rawData; 
       }
-
       return [];
     } catch (e) {
-      print("Lỗi API getAllOrders: $e");
+      debugPrint("Lỗi API getAllOrders: $e");
       return [];
     }
   }
@@ -67,11 +64,9 @@ class AdminApi {
         '/admin/orders/$id/status',
         data: {'status': status},
       );
-
-      return res.data['ok'] == true ||
-          res.statusCode == 200;
+      return res.data['ok'] == true || res.statusCode == 200;
     } catch (e) {
-      print("Lỗi API updateOrderStatus: $e");
+      debugPrint("Lỗi API updateOrderStatus: $e");
       return false;
     }
   }
@@ -79,8 +74,6 @@ class AdminApi {
   // ======================================================
   // 3. PRODUCTS MANAGEMENT
   // ======================================================
-
-  /// GET PRODUCTS (optional search)
   Future<List<dynamic>> getAllProducts({String? search}) async {
     try {
       final res = await _dio.get(
@@ -92,62 +85,46 @@ class AdminApi {
 
       if (res.data['ok'] == true || res.statusCode == 200) {
         final rawData = res.data['data'];
-
         if (rawData is List) return rawData;
-
         if (rawData is Map) {
           if (rawData.containsKey('docs')) return rawData['docs'];
           if (rawData.containsKey('data')) return rawData['data'];
           if (rawData.containsKey('items')) return rawData['items'];
         }
       }
-
       return [];
     } catch (e) {
-      print("Lỗi API getAllProducts: $e");
+      debugPrint("Lỗi API getAllProducts: $e");
       return [];
     }
   }
 
-  /// CREATE PRODUCT
   Future<bool> createProduct(Map<String, dynamic> data) async {
     try {
-      final res = await _dio.post(
-        Endpoints.products,
-        data: data,
-      );
-
-      return res.data['ok'] == true ||
-          res.statusCode == 200 ||
-          res.statusCode == 201;
+      final res = await _dio.post(Endpoints.products, data: data);
+      return res.data['ok'] == true || res.statusCode == 200 || res.statusCode == 201;
     } catch (e) {
-      print("Lỗi API createProduct: $e");
+      debugPrint("Lỗi API createProduct: $e");
       return false;
     }
   }
 
-  /// UPDATE PRODUCT
   Future<bool> updateProduct(String id, Map<String, dynamic> data) async {
     try {
       final res = await _dio.patch('${Endpoints.products}/$id', data: data);
-
-      return res.data['ok'] == true ||
-          res.statusCode == 200;
+      return res.data['ok'] == true || res.statusCode == 200;
     } catch (e) {
-      print("Lỗi API updateProduct: $e");
+      debugPrint("Lỗi API updateProduct: $e");
       return false;
     }
   }
 
-  /// DELETE PRODUCT
   Future<bool> deleteProduct(String id) async {
     try {
       final res = await _dio.delete('${Endpoints.products}/$id');
-
-      return res.data['ok'] == true ||
-          res.statusCode == 200;
+      return res.data['ok'] == true || res.statusCode == 200;
     } catch (e) {
-      print("Lỗi API deleteProduct: $e");
+      debugPrint("Lỗi API deleteProduct: $e");
       return false;
     }
   }
@@ -155,42 +132,31 @@ class AdminApi {
   // ======================================================
   // 4. CATEGORY MANAGEMENT
   // ======================================================
-
   Future<List<dynamic>> getAllCategories() async {
     try {
       final res = await _dio.get('/admin/categories');
-
       if (res.data['ok'] == true || res.statusCode == 200) {
         final rawData = res.data['data'];
-
         if (rawData is List) return rawData;
-
         if (rawData is Map) {
           if (rawData.containsKey('docs')) return rawData['docs'];
           if (rawData.containsKey('data')) return rawData['data'];
           if (rawData.containsKey('items')) return rawData['items'];
         }
       }
-
       return [];
     } catch (e) {
-      print("Lỗi API getAllCategories: $e");
+      debugPrint("Lỗi API getAllCategories: $e");
       return [];
     }
   }
 
   Future<bool> createCategory(Map<String, dynamic> data) async {
     try {
-      final res = await _dio.post(
-        '/admin/categories',
-        data: data,
-      );
-
-      return res.data['ok'] == true ||
-          res.statusCode == 200 ||
-          res.statusCode == 201;
+      final res = await _dio.post('/admin/categories', data: data);
+      return res.data['ok'] == true || res.statusCode == 200 || res.statusCode == 201;
     } catch (e) {
-      print("Lỗi API createCategory: $e");
+      debugPrint("Lỗi API createCategory: $e");
       return false;
     }
   }
@@ -198,11 +164,9 @@ class AdminApi {
   Future<bool> updateCategory(String id, Map<String, dynamic> data) async {
     try {
       final res = await _dio.put('/admin/categories/$id', data: data);
-
-      return res.data['ok'] == true ||
-          res.statusCode == 200;
+      return res.data['ok'] == true || res.statusCode == 200;
     } catch (e) {
-      print("Lỗi API updateCategory: $e");
+      debugPrint("Lỗi API updateCategory: $e");
       return false;
     }
   }
@@ -210,11 +174,59 @@ class AdminApi {
   Future<bool> deleteCategory(String id) async {
     try {
       final res = await _dio.delete('/admin/categories/$id');
-
-      return res.data['ok'] == true ||
-          res.statusCode == 200;
+      return res.data['ok'] == true || res.statusCode == 200;
     } catch (e) {
-      print("Lỗi API deleteCategory: $e");
+      debugPrint("Lỗi API deleteCategory: $e");
+      return false;
+    }
+  }
+
+  // ======================================================
+  // 5. COMMENTS MANAGEMENT (PHẦN MỚI)
+  // ======================================================
+  Future<List<dynamic>> getAllComments() async {
+    try {
+      final res = await _dio.get('/admin/comments');
+      // Fix: Bóc tách data tương tự các phần trên để an toàn
+      if (res.data['ok'] == true || res.statusCode == 200) {
+        final rawData = res.data['data'];
+        if (rawData is List) return rawData;
+        if (rawData is Map && rawData.containsKey('docs')) return rawData['docs'];
+        return rawData ?? [];
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Lỗi API getAllComments: $e");
+      return [];
+    }
+  }
+
+  Future<bool> replyComment(String commentId, String content) async {
+    try {
+      final res = await _dio.patch('/admin/comments/$commentId/reply', data: {'content': content});
+      return res.data['ok'] == true || res.statusCode == 200;
+    } catch (e) {
+      debugPrint("Lỗi API replyComment: $e");
+      return false;
+    }
+  }
+
+  Future<bool> toggleHideComment(String commentId, bool isHidden) async {
+    try {
+      final res = await _dio.patch('/admin/comments/$commentId/hide', data: {'isHidden': isHidden});
+      return res.data['ok'] == true || res.statusCode == 200;
+    } catch (e) {
+      debugPrint("Lỗi API toggleHideComment: $e");
+      return false;
+    }
+  }
+
+  Future<bool> deleteComment(String commentId) async {
+    try {
+      final res = await _dio.delete('/admin/comments/$commentId');
+      return res.data['ok'] == true || res.statusCode == 200;
+    } catch (e) {
+      debugPrint("Lỗi API deleteComment: $e");
       return false;
     }
   }
