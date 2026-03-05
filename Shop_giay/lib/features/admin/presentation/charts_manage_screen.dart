@@ -172,7 +172,7 @@ class _ChartsManageScreenState extends State<ChartsManageScreen> {
                   touchTooltipData: LineTouchTooltipData(
                     getTooltipColor: (touchedSpot) => Colors.black87,
                     tooltipPadding: const EdgeInsets.all(8),
-                    tooltipRoundedRadius: 8,
+                    
                     getTooltipItems: (List<LineBarSpot> touchedSpots) {
                       return touchedSpots.map((LineBarSpot touchedSpot) {
                         final index = touchedSpot.x.toInt();
