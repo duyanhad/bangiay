@@ -139,6 +139,15 @@ exports.getProducts = asyncHandler(async (req, res) => {
   const products = await adminSvc.getAllProductsAdmin();
   ok(res, products);
 });
+exports.getRevenueChart = async (req, res, next) => {
+  try {
+    const type = req.query.type || "week";
+    const data = await adminService.getRevenueChart(type);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+};
 exports.updateOrderStatus = asyncHandler(async (req, res) => {
   ok(
     res,

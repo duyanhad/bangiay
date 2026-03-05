@@ -11,52 +11,56 @@ const orderService = require("./order.service");
 exports.getDashboardStats = async () => {
   // Thực hiện song song các query để tối ưu tốc độ
   const [
-    userCount, 
-    productCount, 
-    orderCount, 
-    revenueAgg, 
+    userCount,
+    productCount,
+    orderCount,
+    revenueAgg,
     stockAgg,
-    // 🔥 THÊM 2 BIẾN NÀY ĐỂ TRẢ VỀ CHO APP FLUTTER
-    topSellingData,
-    lowStockData
+    orderStatusAgg // 🔵 THÊM: Query gom nhóm đếm trạng thái đơn hàng
   ] = await Promise.all([
     User.countDocuments({ role: "user" }),
     Product.countDocuments(),
     Order.countDocuments(),
-    
-    // Tính tổng doanh thu (chỉ tính đơn đã xác nhận/thành công)
+    // Tính tổng doanh thu (chỉ đơn đã hoàn thành)
     Order.aggregate([
-      { $match: { status: { $in: ["confirmed", "shipping", "done"] } } }, 
+      { $match: { status: "done" } },
       { $group: { _id: null, revenue: { $sum: "$total" } } }
     ]),
-    
     // Tính tổng tồn kho
     Product.aggregate([
-      { $group: { _id: null, totalStock: { $sum: "$stock" } } }
+      { $group: { _id: null, stock: { $sum: "$stock" } } }
     ]),
-
-    // 🔥 Query 1: Top 5 Bán chạy (Cho Flutter)
-    Product.find()
-      .sort({ soldCount: -1 })
-      .limit(5)
-      .select("name images price stock soldCount category"),
-    
-    // 🔥 Query 2: Top 5 Sắp hết hàng (Cho Flutter)
-    Product.find({ stock: { $lte: 5 } }) // Lấy những cái dưới 5
-      .sort({ stock: 1 }) 
-      .limit(5)
-      .select("name images price stock soldCount category")
+    // Gom nhóm và đếm số lượng từng trạng thái đơn hàng
+    Order.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ])
   ]);
+
+  // Bóc tách dữ liệu trạng thái đơn hàng an toàn
+  let pendingOrders = 0, confirmedOrders = 0, shippingOrders = 0, completedOrders = 0, cancelledOrders = 0;
+  
+  if (orderStatusAgg && orderStatusAgg.length > 0) {
+    orderStatusAgg.forEach(item => {
+      if (item._id === 'pending') pendingOrders = item.count;
+      if (item._id === 'confirmed') confirmedOrders = item.count;
+      if (item._id === 'shipping') shippingOrders = item.count;
+      if (item._id === 'done') completedOrders = item.count;
+      if (item._id === 'cancelled') cancelledOrders = item.count;
+    });
+  }
 
   return {
     userCount,
-    productCount, 
-    orderCount,     
-    revenue: revenueAgg[0]?.revenue || 0, 
-    totalStock: stockAgg[0]?.totalStock || 0,
-    // ✅ QUAN TRỌNG: Trả về 2 mảng này thì Flutter mới hiện list được
-    topSelling: topSellingData, 
-    lowStock: lowStockData      
+    productCount,
+    orderCount,
+    revenue: revenueAgg[0]?.revenue || 0,
+    totalStock: stockAgg[0]?.stock || 0,
+    // Trả về cho model Flutter
+    pendingOrders,
+    confirmedOrders,
+    shippingOrders,
+    completedOrders,
+    cancelledOrders
   };
 };
 
@@ -72,10 +76,54 @@ exports.getLowStock = async () => {
 
 // API riêng lẻ lấy top selling (nếu web admin cần dùng riêng)
 exports.getTopSelling = async () => {
-  return await Product.find()
-    .sort({ soldCount: -1 })
-    .limit(5)
-    .select("name images price soldCount category");
+  const topSelling = await Order.aggregate([
+    // 1. Chỉ lọc các đơn hàng đã giao thành công
+    { $match: { status: "done" } },
+    
+    // 2. Tách mảng items trong đơn hàng thành từng phần tử riêng để dễ đếm
+    { $unwind: "$items" },
+    
+    // 3. Gom nhóm theo productId và cộng dồn số lượng bán (qty)
+    { 
+      $group: { 
+        _id: "$items.productId", 
+        totalSold: { $sum: "$items.qty" },
+        // Tính thêm doanh thu mang lại từ sản phẩm này (Tùy chọn)
+        revenueFromProduct: { $sum: { $multiply: ["$items.qty", "$items.price"] } }
+      } 
+    },
+    
+    // 4. Sắp xếp theo số lượng bán giảm dần
+    { $sort: { totalSold: -1 } },
+    
+    // 5. Lấy Top 10 sản phẩm
+    { $limit: 10 },
+    
+    // 6. Join với bảng Product để lấy thông tin ảnh, tên,... trả về cho Flutter
+    {
+      $lookup: {
+        from: "products", // Lưu ý: Tên collection trong MongoDB thường có chữ "s"
+        localField: "_id",
+        foreignField: "_id",
+        as: "productInfo"
+      }
+    },
+    
+    // 7. Giải nén mảng productInfo và gom dữ liệu lại thành 1 object chuẩn
+    { $unwind: "$productInfo" },
+    {
+      $replaceRoot: { 
+        newRoot: { 
+          $mergeObjects: [
+            "$productInfo", 
+            { totalSold: "$totalSold", revenueFromProduct: "$revenueFromProduct" }
+          ] 
+        } 
+      }
+    }
+  ]);
+  
+  return topSelling;
 };
 
 // Biểu đồ doanh thu
@@ -249,7 +297,44 @@ exports.updateOrderStatus = async (orderId, status) => {
   // Để tự động xử lý Trừ kho, Cộng lượt bán và Gắn ảnh!
   return await orderService.updateStatus(orderId, status);
 };
+exports.getRevenueChart = async (type = 'week') => {
+  let dateFilter = new Date();
+  let groupId = {};
 
+  // Xác định khoảng thời gian và cách gom nhóm (group)
+  if (type === 'week') {
+    dateFilter.setDate(dateFilter.getDate() - 7); // 7 ngày qua
+    groupId = { $dateToString: { format: "%d-%m", date: "$createdAt", timezone: "Asia/Ho_Chi_Minh" } };
+  } else if (type === 'month') {
+    dateFilter.setDate(dateFilter.getDate() - 30); // 30 ngày qua
+    groupId = { $dateToString: { format: "%d-%m", date: "$createdAt", timezone: "Asia/Ho_Chi_Minh" } };
+  } else if (type === 'year') {
+    dateFilter.setMonth(dateFilter.getMonth() - 12); // 12 tháng qua
+    groupId = { $dateToString: { format: "%m/%Y", date: "$createdAt", timezone: "Asia/Ho_Chi_Minh" } };
+  }
+
+  const data = await Order.aggregate([
+    // 1. Chỉ lấy đơn hoàn thành và trong khoảng thời gian đã chọn
+    { $match: { status: "done", createdAt: { $gte: dateFilter } } },
+    
+    // 2. Gom nhóm theo Ngày hoặc Tháng và tính tổng tiền
+    { 
+      $group: { 
+        _id: groupId, 
+        revenue: { $sum: "$total" } 
+      } 
+    },
+    
+    // 3. Sắp xếp theo thời gian (từ cũ tới mới)
+    { $sort: { _id: 1 } } 
+  ]);
+
+  // Trả về mảng dễ đọc cho Flutter: [{ label: "15-10", revenue: 500000 }, ...]
+  return data.map(item => ({
+    label: item._id,
+    revenue: item.revenue
+  }));
+};
 exports.getOrderDetails = async (orderId) => {
   const order = await Order.findById(orderId).populate("userId", "name email phone address");
   if (!order) throw new ApiError("Order not found", 404);

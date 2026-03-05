@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
+import '../../../core/config/app_config.dart';
 
 // ✅ 1. Import đúng file màu
 import '../../../core/theme/admin_colors.dart';
@@ -24,8 +26,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     // Load dữ liệu ngay khi vào màn hình
-    Future.microtask(() =>
-        context.read<AdminController>().loadStats());
+    Future.microtask(() => context.read<AdminController>().loadStats());
+  }
+
+  // --- HÀM XỬ LÝ ẢNH CHUẨN ---
+  String _getValidImageUrl(String? path) {
+    if (path == null || path.isEmpty) return "";
+    if (path.startsWith('http')) return path;
+
+    String base = AppConfig.baseUrl;
+
+    // CHỈ đổi localhost khi chạy ANDROID
+    if (!kIsWeb && base.contains('localhost')) {
+      base = base.replaceFirst('localhost', '10.0.2.2');
+    }
+
+    if (base.endsWith('/')) base = base.substring(0, base.length - 1);
+    String cleanPath = path.startsWith('/') ? path : '/$path';
+    
+    String finalUrl = "$base$cleanPath";
+    // IN RA CONSOLE ĐỂ KIỂM TRA ĐƯỜNG DẪN CÓ ĐÚNG CHƯA
+    debugPrint("🛠 URL Ảnh Dashboard: $finalUrl"); 
+    
+    return finalUrl;
   }
 
   @override
@@ -230,44 +253,81 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             child: Column(
               children: items.map((product) { 
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  
-                  // Hiển thị ảnh thay vì icon
-                  leading: Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade200),
-                      image: DecorationImage(
-                        image: (product.images.isNotEmpty)
-                          ? NetworkImage(product.images.first)
-                          : const AssetImage('assets/images/placeholder.png') as ImageProvider,
-                        fit: BoxFit.cover
-                      )
-                    ),
-                  ),
-                  
-                  title: Text(product.name,
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isLowStock ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      isLowStock
-                          ? "SL: ${product.stock}"
-                          : "Đã bán: ${product.soldCount}",
-                      style: TextStyle(
-                        color: isLowStock ? Colors.red : Colors.green,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Căn giữa theo chiều dọc
+                    children: [
+                      // 1. Phần Ảnh sản phẩm
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: (product.images.isNotEmpty)
+                              ? Image.network(
+                                  _getValidImageUrl(product.images.first),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(Icons.image_not_supported, color: Colors.grey, size: 24);
+                                  },
+                                )
+                              : const Icon(Icons.inventory_2_outlined, color: Colors.grey, size: 24),
+                        ),
                       ),
-                    ),
+                      
+                      const SizedBox(width: 12), // Khoảng cách giữa ảnh và chữ
+                      
+                      // 2. Phần Tên sản phẩm
+                      Expanded(
+                        child: Text(
+                          product.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600, 
+                            fontSize: 14,
+                          ),
+                          maxLines: 1, 
+                          overflow: TextOverflow.ellipsis, 
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 8), 
+                      
+                      // 3. Nhãn "Đã bán: X" hoặc "Tồn kho: X"
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          // Nếu là list Sắp hết hàng thì nhãn màu đỏ/cam, Bán chạy thì màu xanh
+                          color: isLowStock ? Colors.orange.shade50 : Colors.green.shade50, 
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isLowStock ? "Tồn kho: " : "Đã bán: ",
+                              style: TextStyle(
+                                fontSize: 12, 
+                                color: isLowStock ? Colors.orange.shade700 : Colors.green.shade700,
+                              ),
+                            ),
+                            Text(
+                              isLowStock ? "${product.stock}" : "${product.soldCount}",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold, 
+                                color: isLowStock ? Colors.orange.shade700 : Colors.green.shade700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }).toList(),

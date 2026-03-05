@@ -5,10 +5,12 @@ import '../../../core/theme/admin_colors.dart';
 
 // ✅ 1. Import đúng đường dẫn tương đối (từ widgets ra presentation)
 import '../presentation/admin_dashboard_screen.dart';
-import '../presentation/products_manage_screen.dart'; // File có thật trong ảnh
-import '../presentation/comments_manage_screen.dart'; // File có thật trong ảnh
-import '../presentation/orders_manage_screen.dart';   // File có thật trong ảnh
+import '../presentation/products_manage_screen.dart'; 
+import '../presentation/comments_manage_screen.dart'; 
+import '../presentation/orders_manage_screen.dart';   
 import '../presentation/categories_manage_screen.dart';
+import '../presentation/charts_manage_screen.dart'; // 🔥 Import màn hình biểu đồ
+
 class AdminDrawer extends StatelessWidget {
   const AdminDrawer({super.key});
 
@@ -21,7 +23,7 @@ class AdminDrawer extends StatelessWidget {
           // 1. Header: Thông tin Admin
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(
-              color: AdminColors.header1, // ✅ Đã sửa thành header1
+              color: AdminColors.header1, 
             ),
             currentAccountPicture: const CircleAvatar(
               backgroundColor: Colors.white,
@@ -48,15 +50,27 @@ class AdminDrawer extends StatelessWidget {
                   },
                 ),
                 
+                // 🔥 THÊM: Menu "Thống kê & Biểu đồ"
+               
+                
                 const Divider(), 
-
+ _buildMenuItem(
+                  context,
+                  icon: Icons.bar_chart_rounded, // Icon biểu đồ
+                  title: "Thống kê & Biểu đồ",
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const ChartsManageScreen()),
+                    );
+                  },
+                ),
                 _buildMenuItem(
                   context,
                   icon: Icons.inventory_2_outlined,
                   title: "Quản lý Sản phẩm",
                   onTap: () {
                     Navigator.pop(context);
-                    // ✅ SỬA LỖI: Gọi đúng tên Class ProductsManageScreen
                     Navigator.of(context).pushReplacement(
                         MaterialPageRoute(builder: (_) => const ProductsManageScreen()),
                     );
@@ -69,7 +83,6 @@ class AdminDrawer extends StatelessWidget {
                   title: "Quản lý Đơn hàng",
                   onTap: () {
                     Navigator.pop(context);
-                    // ✅ Đã mở comment vì thấy bạn có file orders_manage_screen.dart
                     Navigator.pushReplacement(
                       context, 
                       MaterialPageRoute(builder: (_) => const OrdersManageScreen())
@@ -78,18 +91,18 @@ class AdminDrawer extends StatelessWidget {
                 ),
                 
                 _buildMenuItem(
-  context,
-  icon: Icons.category_outlined,
-  title: "Quản lý Danh mục",
-  onTap: () {
-    Navigator.pop(context);
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const CategoriesManageScreen(),
-      ),
-    );
-  },
-),
+                  context,
+                  icon: Icons.category_outlined,
+                  title: "Quản lý Danh mục",
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => const CategoriesManageScreen(),
+                      ),
+                    );
+                  },
+                ),
                 
                 _buildMenuItem(
                   context,
@@ -97,7 +110,6 @@ class AdminDrawer extends StatelessWidget {
                   title: "Quản lý Bình luận",
                   onTap: () {
                     Navigator.pop(context);
-                    // ✅ SỬA LỖI: Gọi đúng tên Class CommentsManageScreen
                     Navigator.of(context).pushReplacement(
                         MaterialPageRoute(builder: (_) => const CommentsManageScreen()),
                     );
@@ -121,7 +133,7 @@ class AdminDrawer extends StatelessWidget {
       ),
     );
   }
-
+  
   Widget _buildMenuItem(BuildContext context, {required IconData icon, required String title, required VoidCallback onTap}) {
     return ListTile(
       leading: Icon(icon, color: Colors.grey[700]),

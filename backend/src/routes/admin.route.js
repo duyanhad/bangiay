@@ -28,5 +28,6 @@ router.get("/comments", c.getComments); // Lấy tất cả comment để quản
 router.patch("/comments/:id/reply", c.replyComment); // Admin rep
 router.patch("/comments/:id/hide", c.hideComment); // Ẩn/Hiện
 router.delete("/comments/:id", c.deleteComment); // Xóa vĩnh viễn
-
+router.get("/stats", c.getStats);
+router.get("/revenue-chart", c.getRevenueChart);
 module.exports = router;

@@ -11,7 +11,7 @@ class DioClient {
       if (Platform.isAndroid) return 'http://10.0.2.2:8080';
     } catch (e) {}
     // Thay IP này bằng IP Wifi máy tính của bạn nếu chạy trên máy thật
-    return 'http://192.168.1.100:8080'; 
+    return 'http://192.168.1.101:8080'; 
   }
 
   // 2. CẤU HÌNH DIO SỬ DỤNG HOST TRÊN

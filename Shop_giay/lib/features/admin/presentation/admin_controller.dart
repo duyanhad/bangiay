@@ -6,12 +6,12 @@ class AdminController extends ChangeNotifier {
   final AdminApi _api = AdminApi();
 
   AdminStats? stats;
+
   List<dynamic> orders = [];
 
   List<dynamic> products = [];
   List<dynamic> _allProducts = [];
 
-  // ================= CATEGORY =================
   List<dynamic> _categories = [];
   bool _isLoadingCategories = false;
 
@@ -19,6 +19,8 @@ class AdminController extends ChangeNotifier {
   bool get isLoadingCategories => _isLoadingCategories;
 
   bool isLoading = false;
+  bool isLoadingMore = false;
+
   String? error;
 
   void _setLoading(bool val) {
@@ -32,109 +34,111 @@ class AdminController extends ChangeNotifier {
   }
 
   // ================= DASHBOARD =================
-  Future<void> loadStats() async {
+
+  Future<void> loadStats({String chartType = 'week'}) async {
     _setLoading(true);
+
     try {
-      stats = await _api.getStats();
+      stats = await _api.getStats(chartType: chartType);
       error = null;
     } catch (e) {
-      error = "Lỗi tải thống kê: $e";
+      error = "Lỗi tải dashboard";
+      debugPrint("loadStats error: $e");
     } finally {
       _setLoading(false);
     }
   }
 
   // ================= ORDERS =================
-  // ✅ 3 BIẾN QUẢN LÝ PHÂN TRANG
-  int _currentPage = 1;
-  bool hasMore = true; 
-  bool isLoadingMore = false;
 
-  // HÀM TẢI LẦN ĐẦU / LÀM MỚI (Hỗ trợ lọc trạng thái)
+  int _currentPage = 1;
+  bool hasMore = true;
+
   Future<void> loadOrders({String? status}) async {
     _currentPage = 1;
     hasMore = true;
-    _setLoading(true);
-    
-    try {
-      // Gọi API tải trang 1 và truyền kèm trạng thái lọc
-      final data = await _api.getAllOrders(page: _currentPage, limit: 20, status: status);
-      
-      // Đề phòng API trả về Map {orders: [], total: ...} thay vì List thuần
-      List<dynamic> fetchedOrders = data is Map ? data['orders'] ?? [] : data;
 
-      orders = List.from(fetchedOrders);
-      
-      // Nếu số đơn lấy về nhỏ hơn 20 -> Đã hết đơn hàng
-      if (fetchedOrders.length < 20) {
+    _setLoading(true);
+
+    try {
+      final data =
+          await _api.getAllOrders(page: _currentPage, limit: 20, status: status);
+
+      orders = List.from(data);
+
+      if (data.length < 20) {
         hasMore = false;
       }
+
       error = null;
     } catch (e) {
-      error = "Lỗi tải đơn hàng: $e";
+      error = "Lỗi tải đơn hàng";
+      debugPrint(e.toString());
     } finally {
       _setLoading(false);
     }
   }
 
-  // HÀM TẢI THÊM ĐƠN KHI VUỐT CHẠM ĐÁY (Hỗ trợ lọc trạng thái)
-  Future<void> loadMoreOrders({String? status}) async { 
-    // Nếu đang tải dở hoặc đã hết đơn thì không gọi API nữa
+  Future<void> loadMoreOrders({String? status}) async {
     if (isLoadingMore || !hasMore) return;
 
     isLoadingMore = true;
     _currentPage++;
-    notifyListeners(); // Hiện vòng xoay loading ở đáy danh sách
+
+    notifyListeners();
 
     try {
-      // Gọi API tải trang tiếp theo (vẫn giữ trạng thái đang lọc)
-      final data = await _api.getAllOrders(page: _currentPage, limit: 20, status: status);
-      List<dynamic> fetchedOrders = data is Map ? data['orders'] ?? [] : data;
+      final data =
+          await _api.getAllOrders(page: _currentPage, limit: 20, status: status);
 
-      if (fetchedOrders.isEmpty || fetchedOrders.length < 20) {
-        hasMore = false; // Đã đến trang cuối
+      if (data.isEmpty || data.length < 20) {
+        hasMore = false;
       }
 
-      // Nối thêm đơn hàng mới vào cuối danh sách hiện tại
-      orders.addAll(fetchedOrders);
-      error = null;
+      orders.addAll(data);
     } catch (e) {
-      error = "Lỗi tải thêm đơn hàng: $e";
-      _currentPage--; // Lỗi thì lùi lại trang cũ để vuốt lại
+      _currentPage--;
+      debugPrint(e.toString());
     } finally {
       isLoadingMore = false;
-      notifyListeners(); // Tắt vòng xoay loading
+      notifyListeners();
     }
   }
 
-  // HÀM UPDATE STATUS
   Future<bool> updateStatus(String id, String status) async {
     try {
       bool success = await _api.updateOrderStatus(id, status);
+
       if (success) {
         int index = orders.indexWhere((o) => (o['_id'] ?? o['id']) == id);
-        if (index != -1) {
+
+        if (index != -1 && orders[index] is Map) {
           orders[index]['status'] = status;
           notifyListeners();
         }
-        return true;
       }
-      return false;
+
+      return success;
     } catch (e) {
+      debugPrint(e.toString());
       return false;
     }
   }
 
   // ================= PRODUCTS =================
+
   Future<void> loadProducts() async {
     _setLoading(true);
+
     try {
       final data = await _api.getAllProducts();
+
       _allProducts = List.from(data);
       products = List.from(data);
+
       error = null;
     } catch (e) {
-      error = "Lỗi tải sản phẩm: $e";
+      error = "Lỗi tải sản phẩm";
     } finally {
       _setLoading(false);
     }
@@ -145,20 +149,29 @@ class AdminController extends ChangeNotifier {
       products = List.from(_allProducts);
     } else {
       products = _allProducts.where((p) {
-        final name = p['name'].toString().toLowerCase();
+        final name =
+            (p['name'] ?? "").toString().toLowerCase();
+
         return name.contains(keyword.toLowerCase());
       }).toList();
     }
+
     notifyListeners();
   }
 
   Future<bool> createProduct(Map<String, dynamic> data) async {
     try {
       _setLoading(true);
+
       bool success = await _api.createProduct(data);
-      if (success) await loadProducts();
+
+      if (success) {
+        await loadProducts();
+      }
+
       return success;
     } catch (e) {
+      debugPrint(e.toString());
       return false;
     } finally {
       _setLoading(false);
@@ -168,8 +181,13 @@ class AdminController extends ChangeNotifier {
   Future<bool> updateProduct(String id, Map<String, dynamic> data) async {
     try {
       _setLoading(true);
+
       bool success = await _api.updateProduct(id, data);
-      if (success) await loadProducts();
+
+      if (success) {
+        await loadProducts();
+      }
+
       return success;
     } catch (e) {
       return false;
@@ -181,85 +199,85 @@ class AdminController extends ChangeNotifier {
   Future<bool> deleteProduct(String id) async {
     try {
       bool success = await _api.deleteProduct(id);
+
       if (success) {
         _allProducts.removeWhere((p) => (p['_id'] ?? p['id']) == id);
         products.removeWhere((p) => (p['_id'] ?? p['id']) == id);
+
         notifyListeners();
       }
+
       return success;
     } catch (e) {
       return false;
     }
   }
 
-  // ======================================================
-  // 4. COMMENTS MANAGEMENT (PHẦN CHUẨN)
-  // ======================================================
+  // ================= COMMENTS =================
+
   List<dynamic> _adminComments = [];
   List<dynamic> get adminComments => _adminComments;
 
-  /// Tải danh sách tất cả bình luận từ Server
   Future<void> loadAdminComments() async {
     _setLoading(true);
+
     try {
-      // Gọi API lấy toàn bộ comment
-      final res = await _api.getAllComments(); 
+      final res = await _api.getAllComments();
+
       _adminComments = List.from(res);
+
       error = null;
     } catch (e) {
-      debugPrint("Lỗi tải bình luận: $e");
       error = "Không thể tải bình luận";
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Trả lời bình luận
   Future<bool> handleReply(String id, String content) async {
     try {
       bool success = await _api.replyComment(id, content);
+
       if (success) {
-        // Sau khi rep thành công, cập nhật lại danh sách để hiện nội dung rep
-        await loadAdminComments(); 
+        await loadAdminComments();
       }
+
       return success;
     } catch (e) {
-      debugPrint("Lỗi trả lời: $e");
       return false;
     }
   }
 
-  /// Ẩn hoặc Hiện bình luận (Cập nhật UI tức thì)
   Future<void> handleHide(String id, bool isHidden) async {
     try {
-      // Sửa lỗi: AdminApi dùng toggleHideComment chứ không phải hideComment
       bool success = await _api.toggleHideComment(id, isHidden);
+
       if (success) {
-        // Tìm và cập nhật trực tiếp trong list để UI thay đổi ngay lập tức
-        int index = _adminComments.indexWhere((item) => (item['_id'] ?? item['id']) == id);
+        int index =
+            _adminComments.indexWhere((item) => (item['_id'] ?? item['id']) == id);
+
         if (index != -1) {
           _adminComments[index]['isHidden'] = isHidden;
           notifyListeners();
         }
       }
     } catch (e) {
-      debugPrint("Lỗi ẩn/hiện: $e");
+      debugPrint(e.toString());
     }
   }
 
-  /// Xóa vĩnh viễn bình luận
   Future<void> deleteComment(String id) async {
     try {
       bool success = await _api.deleteComment(id);
+
       if (success) {
-        // Kiểm tra cả _id và id để xóa khỏi danh sách local
-        _adminComments.removeWhere((item) => 
-          (item['_id']?.toString() ?? item['id']?.toString()) == id
-        );
+        _adminComments.removeWhere(
+            (item) => (item['_id']?.toString() ?? item['id']?.toString()) == id);
+
         notifyListeners();
       }
     } catch (e) {
-      debugPrint("Lỗi khi xóa bình luận: $e");
+      debugPrint(e.toString());
     }
   }
 
@@ -267,6 +285,7 @@ class AdminController extends ChangeNotifier {
 
   Future<void> loadCategories() async {
     _setCategoryLoading(true);
+
     try {
       _categories = await _api.getAllCategories();
     } catch (e) {
@@ -279,7 +298,11 @@ class AdminController extends ChangeNotifier {
   Future<bool> createCategory(Map<String, dynamic> data) async {
     try {
       bool success = await _api.createCategory(data);
-      if (success) await loadCategories();
+
+      if (success) {
+        await loadCategories();
+      }
+
       return success;
     } catch (e) {
       return false;
@@ -289,7 +312,11 @@ class AdminController extends ChangeNotifier {
   Future<bool> updateCategory(String id, Map<String, dynamic> data) async {
     try {
       bool success = await _api.updateCategory(id, data);
-      if (success) await loadCategories();
+
+      if (success) {
+        await loadCategories();
+      }
+
       return success;
     } catch (e) {
       return false;
@@ -299,7 +326,10 @@ class AdminController extends ChangeNotifier {
   Future<void> deleteCategory(String id) async {
     try {
       bool success = await _api.deleteCategory(id);
-      if (success) await loadCategories();
+
+      if (success) {
+        await loadCategories();
+      }
     } catch (e) {
       debugPrint("Delete category error: $e");
     }
