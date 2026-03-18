@@ -152,7 +152,7 @@ class _CommentsManageScreenState extends State<CommentsManageScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: Colors.black.withValues(alpha: 0.03),
                         blurRadius: 10,
                       )
                     ],
@@ -166,7 +166,7 @@ class _CommentsManageScreenState extends State<CommentsManageScreen> {
                         ListTile(
                           leading: CircleAvatar(
                             backgroundColor:
-                                AdminColors.header.withOpacity(0.1),
+                                AdminColors.header.withValues(alpha: 0.1),
                             child: Text(
                               userName.isNotEmpty
                                   ? userName[0].toUpperCase()
@@ -278,7 +278,7 @@ class _CommentsManageScreenState extends State<CommentsManageScreen> {
 
                         const Divider(height: 1),
 
-                        ButtonBar(
+                        OverflowBar(
                           children: [
 
                             TextButton.icon(
@@ -344,9 +344,9 @@ class _CommentsManageScreenState extends State<CommentsManageScreen> {
       padding:
           const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         text,

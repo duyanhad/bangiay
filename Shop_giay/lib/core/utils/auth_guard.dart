@@ -5,6 +5,7 @@ import 'package:shop_giay/features/auth/presentation/login_screen.dart';
 class AuthGuard {
   static Future<bool> check(BuildContext context) async {
     final token = await SecureStore.getToken();
+    if (!context.mounted) return false;
 
     if (token == null || token.isEmpty) {
       Navigator.push(

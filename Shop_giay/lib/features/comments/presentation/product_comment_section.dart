@@ -6,13 +6,13 @@ import 'package:image_picker/image_picker.dart';
 // SỬA THÀNH ĐƯỜNG DẪN TƯƠNG ĐỐI (Dấu chấm)
 import '../data/comment_api.dart';
 import '../domain/comment_model.dart';
-import '../../../core/api/dio_client.dart'; 
+import '../../../core/api/dio_client.dart';
 import '../../../core/storage/secure_store.dart';
 
 class ProductCommentSection extends StatefulWidget {
   final String productId;
 
-  const ProductCommentSection({Key? key, required this.productId}) : super(key: key);
+  const ProductCommentSection({super.key, required this.productId});
 
   @override
   State<ProductCommentSection> createState() => _ProductCommentSectionState();
@@ -25,7 +25,7 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
 
   List<Comment> _comments = [];
   List<XFile> _selectedImages = [];
-  
+
   bool _isLoading = true;
   bool _isSubmitting = false;
 
@@ -99,7 +99,8 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
     }
 
     // Lấy Token thật của user
-    String? userToken = await SecureStore.getToken(); 
+    String? userToken = await SecureStore.getToken();
+    if (!mounted) return;
 
     if (userToken == null || userToken.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -112,10 +113,13 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
 
     try {
       List<String> uploadedImageUrls = [];
-      
+
       // 1. Upload mảng ảnh lên Server
       if (_selectedImages.isNotEmpty) {
-        uploadedImageUrls = await _commentApi.uploadImages(_selectedImages, userToken);
+        uploadedImageUrls = await _commentApi.uploadImages(
+          _selectedImages,
+          userToken,
+        );
       }
 
       // 2. Gửi Text + Mảng Link ảnh
@@ -125,6 +129,7 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
         uploadedImageUrls,
         userToken,
       );
+      if (!mounted) return;
 
       // 3. Thành công -> Reset form
       _commentController.clear();
@@ -139,7 +144,9 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -162,30 +169,43 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
         const Divider(thickness: 4, color: Colors.black12),
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text('Đánh giá & Bình luận', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          child: Text(
+            'Đánh giá & Bình luận',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
         ),
-        
+
         _buildCommentForm(),
 
         const SizedBox(height: 16),
 
         _isLoading
-            ? const Center(child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: CircularProgressIndicator(),
-              ))
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
             : _comments.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: Text("Chưa có bình luận nào. Hãy là người đầu tiên!", style: TextStyle(color: Colors.grey))),
-                  )
-                : ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _comments.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1),
-                    itemBuilder: (context, index) => _buildCommentItem(_comments[index]),
+            ? const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(
+                  child: Text(
+                    "Chưa có bình luận nào. Hãy là người đầu tiên!",
+                    style: TextStyle(color: Colors.grey),
                   ),
+                ),
+              )
+            : ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _comments.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) =>
+                    _buildCommentItem(_comments[index]),
+              ),
       ],
     );
   }
@@ -220,7 +240,7 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
             ),
           ),
           const SizedBox(height: 8),
-          
+
           if (_selectedImages.isNotEmpty)
             SizedBox(
               height: 80,
@@ -238,8 +258,9 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.grey.shade300),
                           image: DecorationImage(
-                            image: kIsWeb 
-                                ? NetworkImage(_selectedImages[index].path) as ImageProvider
+                            image: kIsWeb
+                                ? NetworkImage(_selectedImages[index].path)
+                                      as ImageProvider
                                 : FileImage(File(_selectedImages[index].path)),
                             fit: BoxFit.cover,
                           ),
@@ -256,7 +277,11 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
                               color: Colors.red,
                             ),
                             padding: const EdgeInsets.all(2),
-                            child: const Icon(Icons.close, size: 14, color: Colors.white),
+                            child: const Icon(
+                              Icons.close,
+                              size: 14,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -280,12 +305,27 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                 ),
                 child: _isSubmitting
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Gửi', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Gửi',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
               ),
             ],
           ),
@@ -312,22 +352,28 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(c.userName ?? "Người dùng", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text(
+                      c.userName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          
-          Text(c.content ?? "", style: const TextStyle(fontSize: 14, height: 1.4)),
-          
-          if (c.images != null && c.images!.isNotEmpty) ...[
+
+          Text(c.content, style: const TextStyle(fontSize: 14, height: 1.4)),
+
+          if (c.images.isNotEmpty) ...[
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: c.images!.map((imgPath) {
+              children: c.images.map((imgPath) {
                 return ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
@@ -335,8 +381,15 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
                     width: 80,
                     height: 80,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => 
-                        Container(width: 80, height: 80, color: Colors.grey.shade200, child: const Icon(Icons.image_not_supported, color: Colors.grey)),
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 80,
+                      height: 80,
+                      color: Colors.grey.shade200,
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: Colors.grey,
+                      ),
+                    ),
                   ),
                 );
               }).toList(),
@@ -344,7 +397,7 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
           ],
 
           // GIAO DIỆN PHẢN HỒI TỪ SHOP
-          if (c.replies != null && c.replies!.isNotEmpty)
+          if (c.replies.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 12),
               padding: const EdgeInsets.all(12),
@@ -355,25 +408,47 @@ class _ProductCommentSectionState extends State<ProductCommentSection> {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: c.replies!.map((reply) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: const [
-                          Icon(Icons.storefront_rounded, size: 16, color: Colors.blueAccent),
-                          SizedBox(width: 6),
-                          Text('Phản hồi từ Shop', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent, fontSize: 13)),
-                        ],
+                children: c.replies
+                    .map(
+                      (reply) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.storefront_rounded,
+                                  size: 16,
+                                  color: Colors.blueAccent,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Phản hồi từ Shop',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blueAccent,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              reply.content,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black.withValues(alpha: 0.8),
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(reply.content ?? "", style: TextStyle(fontSize: 13, color: Colors.black.withOpacity(0.8), height: 1.4)),
-                    ],
-                  ),
-                )).toList(),
+                    )
+                    .toList(),
               ),
-            )
+            ),
         ],
       ),
     );

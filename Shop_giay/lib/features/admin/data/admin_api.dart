@@ -10,7 +10,7 @@ class AdminApi {
   // ======================================================
   // 1. DASHBOARD STATS
   // ======================================================
-  Future<AdminStats?> getStats({String chartType = 'week'}) async {
+  Future<AdminStats?> getStats({String chartType = 'day'}) async {
     try {
       final res = await _dio.get(
         Endpoints.adminStats,
@@ -38,19 +38,13 @@ class AdminApi {
     String? status,
   }) async {
     try {
-      Map<String, dynamic> queryParams = {
-        'page': page,
-        'limit': limit,
-      };
+      Map<String, dynamic> queryParams = {'page': page, 'limit': limit};
 
       if (status != null && status != 'All' && status.isNotEmpty) {
         queryParams['status'] = status;
       }
 
-      final res = await _dio.get(
-        '/admin/orders',
-        queryParameters: queryParams,
-      );
+      final res = await _dio.get('/admin/orders', queryParameters: queryParams);
 
       final rawData = res.data?['data'];
 
@@ -113,10 +107,7 @@ class AdminApi {
 
   Future<bool> createProduct(Map<String, dynamic> data) async {
     try {
-      final res = await _dio.post(
-        '/admin/products',
-        data: data,
-      );
+      final res = await _dio.post('/admin/products', data: data);
 
       return res.statusCode == 200 || res.statusCode == 201;
     } catch (e) {
@@ -127,10 +118,7 @@ class AdminApi {
 
   Future<bool> updateProduct(String id, Map<String, dynamic> data) async {
     try {
-      final res = await _dio.patch(
-        '/admin/products/$id',
-        data: data,
-      );
+      final res = await _dio.patch('/admin/products/$id', data: data);
 
       return res.statusCode == 200;
     } catch (e) {

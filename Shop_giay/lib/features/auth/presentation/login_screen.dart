@@ -90,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               if (!_formKey.currentState!.validate()) return;
 
                               // In log bắt đầu
-                              print('>>> [LOGIN] Bắt đầu đăng nhập...');
+                              debugPrint('>>> [LOGIN] Bắt đầu đăng nhập...');
 
                               // 2. Gọi API Login (Dùng context.read cho hành động)
                               final controller = context.read<AuthController>();
@@ -104,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                               // 3. Xử lý kết quả
                               if (err != null) {
-                                print('>>> [LOGIN] Thất bại: $err');
+                                debugPrint('>>> [LOGIN] Thất bại: $err');
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Lỗi: $err'),
@@ -117,24 +117,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                 final user = controller.user;
                                 
                                 // LOG KIỂM TRA DỮ LIỆU
-                                print('>>> [LOGIN] Thành công! Đang kiểm tra Role...');
-                                print('>>> [LOGIN] User Data: ${user.toString()}');
-                                print('>>> [LOGIN] Raw Role from DB: "${user?.role}"');
+                                debugPrint('>>> [LOGIN] Thành công! Đang kiểm tra Role...');
+                                debugPrint('>>> [LOGIN] User Data: ${user.toString()}');
+                                debugPrint('>>> [LOGIN] Raw Role from DB: "${user?.role}"');
 
                                 // Xử lý role an toàn: Bỏ khoảng trắng thừa, chuyển về chữ thường
                                 final safeRole = user?.role.trim().toLowerCase();
-                                print('>>> [LOGIN] Processed Role: "$safeRole"');
+                                debugPrint('>>> [LOGIN] Processed Role: "$safeRole"');
 
                                 if (safeRole == 'admin') {
-                                  print('>>> [LOGIN] => Là ADMIN. Chuyển hướng /admin/dashboard');
+                                  debugPrint('>>> [LOGIN] => Là ADMIN. Chuyển hướng /admin/dashboard');
                                   try {
                                     context.go('/admin/dashboard');
                                   } catch (e) {
-                                    print('>>> [LOGIN] ❌ LỖI ROUTER: $e');
-                                    print('>>> Hãy kiểm tra lại file app_router.dart xem có path "/admin/dashboard" chưa');
+                                    debugPrint('>>> [LOGIN] ❌ LỖI ROUTER: $e');
+                                    debugPrint('>>> Hãy kiểm tra lại file app_router.dart xem có path "/admin/dashboard" chưa');
                                   }
                                 } else {
-                                  print('>>> [LOGIN] => Là USER. Chuyển hướng /');
+                                  debugPrint('>>> [LOGIN] => Là USER. Chuyển hướng /');
                                   context.go('/');
                                 }
                               }

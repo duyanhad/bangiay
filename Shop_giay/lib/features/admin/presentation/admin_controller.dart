@@ -35,7 +35,7 @@ class AdminController extends ChangeNotifier {
 
   // ================= DASHBOARD =================
 
-  Future<void> loadStats({String chartType = 'week'}) async {
+  Future<void> loadStats({String chartType = 'day'}) async {
     _setLoading(true);
 
     try {
@@ -61,8 +61,11 @@ class AdminController extends ChangeNotifier {
     _setLoading(true);
 
     try {
-      final data =
-          await _api.getAllOrders(page: _currentPage, limit: 20, status: status);
+      final data = await _api.getAllOrders(
+        page: _currentPage,
+        limit: 20,
+        status: status,
+      );
 
       orders = List.from(data);
 
@@ -88,8 +91,11 @@ class AdminController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data =
-          await _api.getAllOrders(page: _currentPage, limit: 20, status: status);
+      final data = await _api.getAllOrders(
+        page: _currentPage,
+        limit: 20,
+        status: status,
+      );
 
       if (data.isEmpty || data.length < 20) {
         hasMore = false;
@@ -149,8 +155,7 @@ class AdminController extends ChangeNotifier {
       products = List.from(_allProducts);
     } else {
       products = _allProducts.where((p) {
-        final name =
-            (p['name'] ?? "").toString().toLowerCase();
+        final name = (p['name'] ?? "").toString().toLowerCase();
 
         return name.contains(keyword.toLowerCase());
       }).toList();
@@ -253,8 +258,9 @@ class AdminController extends ChangeNotifier {
       bool success = await _api.toggleHideComment(id, isHidden);
 
       if (success) {
-        int index =
-            _adminComments.indexWhere((item) => (item['_id'] ?? item['id']) == id);
+        int index = _adminComments.indexWhere(
+          (item) => (item['_id'] ?? item['id']) == id,
+        );
 
         if (index != -1) {
           _adminComments[index]['isHidden'] = isHidden;
@@ -272,7 +278,8 @@ class AdminController extends ChangeNotifier {
 
       if (success) {
         _adminComments.removeWhere(
-            (item) => (item['_id']?.toString() ?? item['id']?.toString()) == id);
+          (item) => (item['_id']?.toString() ?? item['id']?.toString()) == id,
+        );
 
         notifyListeners();
       }

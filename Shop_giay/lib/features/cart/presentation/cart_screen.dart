@@ -15,34 +15,53 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
-    // Load giỏ hàng ngay khi vào màn hình
-    Future.microtask(() => context.read<CartController>().loadCart());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<CartController>().loadCart();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Giỏ hàng", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Giỏ hàng",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
       body: Consumer<CartController>(
         builder: (context, controller, child) {
-          if (controller.isLoading) return const Center(child: CircularProgressIndicator());
-          
+          if (controller.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
           if (controller.items.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.shopping_basket_outlined, size: 100, color: Colors.grey),
+                  const Icon(
+                    Icons.shopping_basket_outlined,
+                    size: 100,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(height: 16),
-                  const Text("Giỏ hàng của bạn đang trống", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  const Text(
+                    "Giỏ hàng của bạn đang trống",
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () => context.go('/'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-                    child: const Text("TIẾP TỤC MUA SẮM", style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                    ),
+                    child: const Text(
+                      "TIẾP TỤC MUA SẮM",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -58,16 +77,10 @@ class _CartScreenState extends State<CartScreen> {
               return CartItemTile(
                 item: item,
                 // ✅ SỬA LỖI: Truyền thêm item.size vào hàm updateQuantity
-                onUpdateQty: (qty) => controller.updateQuantity(
-                  item.productId, 
-                  qty, 
-                  item.size, 
-                ),
+                onUpdateQty: (qty) =>
+                    controller.updateQuantity(item.productId, qty, item.size),
                 // ✅ SỬA LỖI: Truyền thêm item.size vào hàm remove
-                onRemove: () => controller.remove(
-                  item.productId, 
-                  item.size,
-                ),
+                onRemove: () => controller.remove(item.productId, item.size),
               );
             },
           );
@@ -86,7 +99,11 @@ class _CartScreenState extends State<CartScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
         ],
       ),
       child: SafeArea(
@@ -97,10 +114,17 @@ class _CartScreenState extends State<CartScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Tổng thanh toán", style: TextStyle(color: Colors.grey, fontSize: 14)),
+                  const Text(
+                    "Tổng thanh toán",
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
                   Text(
                     "${controller.total.toStringAsFixed(0)}đ",
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
                   ),
                 ],
               ),
@@ -111,12 +135,17 @@ class _CartScreenState extends State<CartScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 onPressed: () => context.push('/checkout'),
                 child: const Text(
                   "THANH TOÁN",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),

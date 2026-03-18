@@ -34,7 +34,7 @@ class ProductCard extends StatelessWidget {
             BoxShadow(
               blurRadius: 18,
               offset: const Offset(0, 8),
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
             )
           ],
         ),
@@ -100,7 +100,7 @@ class ProductCard extends StatelessWidget {
                     product.brand,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: Colors.black.withOpacity(0.55), fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.55), fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 10),
 
@@ -123,7 +123,7 @@ class ProductCard extends StatelessWidget {
                           _money(product.price),
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.black.withOpacity(0.35),
+                            color: Colors.black.withValues(alpha: 0.35),
                             decoration: TextDecoration.lineThrough,
                             fontWeight: FontWeight.w700,
                           ),

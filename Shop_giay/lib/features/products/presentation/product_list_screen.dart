@@ -318,7 +318,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Text('${items.length} sản phẩm', style: TextStyle(color: Colors.black.withOpacity(0.6))),
+                        Text('${items.length} sản phẩm', style: TextStyle(color: Colors.black.withValues(alpha: 0.6))),
                       ],
                     ),
                   ),
@@ -330,12 +330,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
                     child: Row(
                       children: [
-                        Expanded(child: Divider(color: Colors.black.withOpacity(0.15), thickness: 1)),
+                        Expanded(child: Divider(color: Colors.black.withValues(alpha: 0.15), thickness: 1)),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 14),
                           child: Text('BEST SELLER', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
                         ),
-                        Expanded(child: Divider(color: Colors.black.withOpacity(0.15), thickness: 1)),
+                        Expanded(child: Divider(color: Colors.black.withValues(alpha: 0.15), thickness: 1)),
                       ],
                     ),
                   ),
@@ -392,7 +392,7 @@ class _DrawerItem extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-      subtitle: subtitle == null ? null : Text(subtitle!, style: TextStyle(color: Colors.black.withOpacity(0.6))),
+      subtitle: subtitle == null ? null : Text(subtitle!, style: TextStyle(color: Colors.black.withValues(alpha: 0.6))),
       trailing: const Icon(Icons.add),
       onTap: onTap,
     );

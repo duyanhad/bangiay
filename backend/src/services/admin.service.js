@@ -126,36 +126,7 @@ exports.getTopSelling = async () => {
   return topSelling;
 };
 
-// Biểu đồ doanh thu
-exports.getRevenueChart = async (type = "day") => {
-  let dateFormat;
-  if (type === "month") dateFormat = "%Y-%m";      
-  else if (type === "year") dateFormat = "%Y";     
-  else dateFormat = "%Y-%m-%d";                    
-
-  // Lấy dữ liệu 12 tháng gần nhất
-  const matchDate = new Date();
-  matchDate.setFullYear(matchDate.getFullYear() - 1);
-
-  const stats = await Order.aggregate([
-    { 
-      $match: { 
-        status: { $in: ["confirmed", "shipping", "done"] },
-        createdAt: { $gte: matchDate } 
-      } 
-    },
-    {
-      $group: {
-        _id: { $dateToString: { format: dateFormat, date: "$createdAt" } },
-        revenue: { $sum: "$total" },
-        count: { $sum: 1 }
-      }
-    },
-    { $sort: { _id: 1 } }
-  ]);
-
-  return stats;
-};
+// Biểu đồ doanh thu: dùng định nghĩa duy nhất ở phía dưới file.
 
 // ============================================================
 // --- 2. QUẢN LÝ USER (GIỮ NGUYÊN) ---
@@ -297,42 +268,87 @@ exports.updateOrderStatus = async (orderId, status) => {
   // Để tự động xử lý Trừ kho, Cộng lượt bán và Gắn ảnh!
   return await orderService.updateStatus(orderId, status);
 };
-exports.getRevenueChart = async (type = 'week') => {
-  let dateFilter = new Date();
-  let groupId = {};
+exports.getRevenueChart = async (type = "day") => {
+  const TZ = "Asia/Ho_Chi_Minh";
+  const now = new Date();
 
-  // Xác định khoảng thời gian và cách gom nhóm (group)
-  if (type === 'week') {
-    dateFilter.setDate(dateFilter.getDate() - 7); // 7 ngày qua
-    groupId = { $dateToString: { format: "%d-%m", date: "$createdAt", timezone: "Asia/Ho_Chi_Minh" } };
-  } else if (type === 'month') {
-    dateFilter.setDate(dateFilter.getDate() - 30); // 30 ngày qua
-    groupId = { $dateToString: { format: "%d-%m", date: "$createdAt", timezone: "Asia/Ho_Chi_Minh" } };
-  } else if (type === 'year') {
-    dateFilter.setMonth(dateFilter.getMonth() - 12); // 12 tháng qua
-    groupId = { $dateToString: { format: "%m/%Y", date: "$createdAt", timezone: "Asia/Ho_Chi_Minh" } };
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const cloneDate = (d) => new Date(d.getTime());
+
+  const toDayKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  const toDayLabel = (d) => `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}`;
+
+  const toMonthKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  const toMonthLabel = (d) => `${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+
+  const toYearKey = (d) => `${d.getFullYear()}`;
+  const toYearLabel = (d) => `${d.getFullYear()}`;
+
+  let startDate;
+  let groupFormat;
+  const buckets = [];
+
+  if (type === "year") {
+    startDate = new Date(now.getFullYear() - 4, 0, 1, 0, 0, 0, 0);
+    groupFormat = "%Y";
+
+    for (let y = now.getFullYear() - 4; y <= now.getFullYear(); y++) {
+      const d = new Date(y, 0, 1);
+      buckets.push({ key: toYearKey(d), label: toYearLabel(d) });
+    }
+  } else if (type === "month") {
+    startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1, 0, 0, 0, 0);
+    groupFormat = "%Y-%m";
+
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+      buckets.push({ key: toMonthKey(d), label: toMonthLabel(d) });
+    }
+  } else {
+    // day: 31 ngày gần nhất (bao gồm hôm nay)
+    const start = cloneDate(now);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - 30);
+    startDate = start;
+    groupFormat = "%Y-%m-%d";
+
+    for (let i = 0; i < 31; i++) {
+      const d = cloneDate(startDate);
+      d.setDate(startDate.getDate() + i);
+      buckets.push({ key: toDayKey(d), label: toDayLabel(d) });
+    }
   }
 
   const data = await Order.aggregate([
-    // 1. Chỉ lấy đơn hoàn thành và trong khoảng thời gian đã chọn
-    { $match: { status: "done", createdAt: { $gte: dateFilter } } },
-    
-    // 2. Gom nhóm theo Ngày hoặc Tháng và tính tổng tiền
-    { 
-      $group: { 
-        _id: groupId, 
-        revenue: { $sum: "$total" } 
-      } 
+    {
+      // Dữ liệu doanh thu thực: chỉ lấy đơn đã hoàn thành (done) trong khoảng thời gian chọn
+      $match: {
+        status: "done",
+        createdAt: { $gte: startDate },
+      },
     },
-    
-    // 3. Sắp xếp theo thời gian (từ cũ tới mới)
-    { $sort: { _id: 1 } } 
+    {
+      $group: {
+        _id: {
+          $dateToString: {
+            format: groupFormat,
+            date: "$createdAt",
+            timezone: TZ,
+          },
+        },
+        revenue: { $sum: { $ifNull: ["$total", 0] } },
+      },
+    },
+    { $sort: { _id: 1 } },
   ]);
 
-  // Trả về mảng dễ đọc cho Flutter: [{ label: "15-10", revenue: 500000 }, ...]
-  return data.map(item => ({
-    label: item._id,
-    revenue: item.revenue
+  const revenueMap = new Map(
+    data.map((item) => [item._id, Number(item.revenue) || 0])
+  );
+
+  return buckets.map((bucket) => ({
+    label: bucket.label,
+    revenue: revenueMap.get(bucket.key) || 0,
   }));
 };
 exports.getOrderDetails = async (orderId) => {

@@ -70,9 +70,8 @@ class _VnpayWebViewState extends State<VnpayWebView> {
   bool _checkPaymentStatus(String url) {
     if (_isCompleted) return true;
 
-    // --- LOGIC BẮT LINK CŨ (Có thể đang bị sai ở đây) ---
-    // App sẽ tự đóng nếu link chứa 'vnp_ResponseCode'
-    if (url.contains('vnp_ResponseCode') || url.contains('vnpay_return')) {
+    // Kiểm tra nếu URL chứa vnp_ResponseCode=00 hoặc vnpay_return (thanh toán thành công)
+    if (url.contains('vnp_ResponseCode=00') || url.contains('vnpay_return')) {
       _finish(true);
       return true;
     }
@@ -84,7 +83,11 @@ class _VnpayWebViewState extends State<VnpayWebView> {
     if (_isCompleted) return;
     _isCompleted = true;
     _timer?.cancel();
-    if (mounted) Navigator.pop(context, isSuccess);
+    
+    if (mounted) {
+      // ✅ Trả lại kết quả cho CheckoutScreen
+      Navigator.pop(context, isSuccess);
+    }
   }
 
   @override

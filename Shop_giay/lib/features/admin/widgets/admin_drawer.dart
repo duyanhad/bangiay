@@ -25,19 +25,19 @@ class AdminDrawer extends StatelessWidget {
           /// ==============================
           /// HEADER ADMIN
           /// ==============================
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
+          const UserAccountsDrawerHeader(
+            decoration: BoxDecoration(
               color: AdminColors.header1,
             ),
-            currentAccountPicture: const CircleAvatar(
+            currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               child: Icon(Icons.person, size: 40, color: AdminColors.header1),
             ),
-            accountName: const Text(
+            accountName: Text(
               "Admin Shop",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            accountEmail: const Text("admin@shop.com"),
+            accountEmail: Text("admin@shop.com"),
           ),
 
           /// ==============================

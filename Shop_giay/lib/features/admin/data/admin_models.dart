@@ -70,7 +70,7 @@ class AdminStats {
   });
 
   factory AdminStats.fromJson(Map<String, dynamic> json) {
-    List<T> _parseList<T>(
+    List<T> parseList<T>(
         dynamic list, T Function(Map<String, dynamic>) fromJson) {
       if (list is List) {
         return list
@@ -105,10 +105,10 @@ class AdminStats {
       cancelledOrders:
           int.tryParse(json['cancelledOrders']?.toString() ?? '0') ?? 0,
 
-      lowStock: _parseList(json['lowStock'], SimpleProduct.fromJson),
-      topSelling: _parseList(json['topSelling'], SimpleProduct.fromJson),
+      lowStock: parseList(json['lowStock'], SimpleProduct.fromJson),
+      topSelling: parseList(json['topSelling'], SimpleProduct.fromJson),
       revenueChart:
-          _parseList(json['revenueChart'], ChartData.fromJson),
+          parseList(json['revenueChart'], ChartData.fromJson),
     );
   }
 }
