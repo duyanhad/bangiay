@@ -68,14 +68,32 @@ exports.getDashboardStats = async () => {
 
 // API riêng lẻ lấy low stock (nếu web admin cần dùng riêng)
 exports.getLowStock = async () => {
-  return await Product.find({ stock: { $lte: 5 } })
+  const baseUrl = process.env.BASE_URL || "http://localhost:8080";
+  
+  const products = await Product.find({ stock: { $lte: 5 } })
     .sort({ stock: 1 }) 
     .limit(5)
-    .select("name images price stock category");
+    .select("name images image_url price stock category");
+  
+  // Gắn full URL cho images
+  return products.map(doc => {
+    const obj = doc.toObject();
+    if (obj.images && Array.isArray(obj.images)) {
+      obj.images = obj.images.map(img => {
+        if (img && !img.startsWith('http')) {
+          return `${baseUrl}/uploads/${img}`;
+        }
+        return img;
+      });
+    }
+    return obj;
+  });
 };
 
 // API riêng lẻ lấy top selling (nếu web admin cần dùng riêng)
 exports.getTopSelling = async () => {
+  const baseUrl = process.env.BASE_URL || "http://localhost:8080";
+  
   const topSelling = await Order.aggregate([
     // 1. Chỉ lọc các đơn hàng đã giao thành công
     { $match: { status: "done" } },
@@ -123,7 +141,18 @@ exports.getTopSelling = async () => {
     }
   ]);
   
-  return topSelling;
+  // Gắn full URL cho images
+  return topSelling.map(doc => {
+    if (doc.images && Array.isArray(doc.images)) {
+      doc.images = doc.images.map(img => {
+        if (img && !img.startsWith('http')) {
+          return `${baseUrl}/uploads/${img}`;
+        }
+        return img;
+      });
+    }
+    return doc;
+  });
 };
 
 // Biểu đồ doanh thu: dùng định nghĩa duy nhất ở phía dưới file.
