@@ -9,6 +9,9 @@ const { notFound, errorHandler } = require("./middlewares/error.middleware");
 const path = require("path"); 
 const app = express();
 
+// Render runs behind a reverse proxy.
+app.set("trust proxy", 1);
+
 app.use(helmet());
 app.use(compression());
 app.use(express.json({ limit: "1mb" }));

@@ -1,19 +1,12 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../storage/secure_store.dart';
 
 class DioClient {
+  static const String _productionHost = 'https://bangiay-a6e9.onrender.com';
+
   // 1. TẠO HÀM DÙNG CHUNG ĐỂ LẤY HOST (Dùng cho cả API và Load Ảnh)
   static String get hostUrl {
-    if (kIsWeb) return 'http://localhost:8080';
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:8080';
-    } catch (_) {
-      // Ignore platform detection failures and use fallback host.
-    }
-    // Thay IP này bằng IP Wifi máy tính của bạn nếu chạy trên máy thật
-    return 'http://192.168.1.100:8080';
+    return _productionHost;
   }
 
   // 2. CẤU HÌNH DIO SỬ DỤNG HOST TRÊN
