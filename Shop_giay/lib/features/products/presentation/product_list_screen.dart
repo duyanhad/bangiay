@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import '../../auth/presentation/auth_controller.dart';
 import 'package:provider/provider.dart';
 
-
 enum _FilterType { all, category, sale }
 
 class ProductListScreen extends StatefulWidget {
@@ -46,7 +45,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
     if (_filterType == _FilterType.sale) {
       out = out.where((p) => p.hasDiscount).toList();
-    } else if (_filterType == _FilterType.category && _selectedCategory != null) {
+    } else if (_filterType == _FilterType.category &&
+        _selectedCategory != null) {
       final key = _selectedCategory!.toLowerCase();
       out = out.where((p) => p.category.toLowerCase() == key).toList();
     }
@@ -125,7 +125,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
             children: [
-              const Text('NEW ARRIVAL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+              const Text(
+                'NEW ARRIVAL',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+              ),
               const SizedBox(height: 14),
 
               _DrawerItem(
@@ -143,47 +146,32 @@ class _ProductListScreenState extends State<ProductListScreen> {
               const Divider(),
               const SizedBox(height: 10),
 
-              const Text('CATEGORIES', style: TextStyle(fontWeight: FontWeight.w900)),
+              const Text(
+                'CATEGORIES',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
               const SizedBox(height: 10),
 
               _DrawerItem(title: 'Nike', onTap: () => _selectCategory('Nike')),
-              _DrawerItem(title: 'Adidas', onTap: () => _selectCategory('Adidas')),
-              _DrawerItem(title: 'Running', onTap: () => _selectCategory('Running')),
-              _DrawerItem(title: 'Sneaker', onTap: () => _selectCategory('Sneaker')),
-              _DrawerItem(title: 'Casual', onTap: () => _selectCategory('Casual')),
-              _DrawerItem(title: 'Skateboarding', onTap: () => _selectCategory('Skateboarding')),
-
-              const SizedBox(height: 10),
-              const Divider(),
-              const SizedBox(height: 10),
-
               _DrawerItem(
-                title: 'SIZE CHART',
-                subtitle: 'Bảng size (demo)',
-                onTap: () {
-                  Navigator.pop(context);
-                  showDialog(
-                    context: context,
-                    builder: (_) => const AlertDialog(
-                      title: Text('Size Chart'),
-                      content: Text('Bạn có thể làm trang này sau.'),
-                    ),
-                  );
-                },
+                title: 'Adidas',
+                onTap: () => _selectCategory('Adidas'),
               ),
               _DrawerItem(
-                title: 'ABOUT US',
-                subtitle: 'Thông tin cửa hàng (demo)',
-                onTap: () {
-                  Navigator.pop(context);
-                  showDialog(
-                    context: context,
-                    builder: (_) => const AlertDialog(
-                      title: Text('About Us'),
-                      content: Text('Bạn có thể làm trang này sau.'),
-                    ),
-                  );
-                },
+                title: 'Running',
+                onTap: () => _selectCategory('Running'),
+              ),
+              _DrawerItem(
+                title: 'Sneaker',
+                onTap: () => _selectCategory('Sneaker'),
+              ),
+              _DrawerItem(
+                title: 'Casual',
+                onTap: () => _selectCategory('Casual'),
+              ),
+              _DrawerItem(
+                title: 'Skateboarding',
+                onTap: () => _selectCategory('Skateboarding'),
               ),
             ],
           ),
@@ -217,52 +205,64 @@ class _ProductListScreenState extends State<ProductListScreen> {
               _FilterType.category => 'Danh mục: ${_selectedCategory ?? ''}',
             };
 
-         return CustomScrollView(
+            return CustomScrollView(
               slivers: [
                 // ✅ TOP BAR (giữ layout y như cũ nhưng bấm được)
                 SliverToBoxAdapter(
                   child: Container(
                     color: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     child: Center(
-                   child: Consumer<AuthController>(
-  builder: (context, auth, child) {
-    if (auth.user != null) {
-      return Text(
-        'Xin chào ${auth.user!.email}',
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-        ),
-      );
-    }
+                      child: Consumer<AuthController>(
+                        builder: (context, auth, child) {
+                          if (auth.user != null) {
+                            return Text(
+                              'Xin chào ${auth.user!.email}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            );
+                          }
 
- return Wrap(
-  crossAxisAlignment: WrapCrossAlignment.center,
-  children: [
-    GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => context.push('/register'),
-      child: const Text(
-        'Đăng ký',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-      ),
-    ),
-    const Text(
-      '   /   ',
-      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-    ),
-    GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => context.push('/login'),
-      child: const Text(
-        'Đăng nhập',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-      ),
-    ),
-  ],
-);
-  },
+                          return Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => context.push('/register'),
+                                child: const Text(
+                                  'Đăng ký',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const Text(
+                                '   /   ',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => context.push('/login'),
+                                child: const Text(
+                                  'Đăng nhập',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -280,7 +280,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
                   ),
-                  title: const Text('Shop Giày', style: TextStyle(fontWeight: FontWeight.w900)),
+                  title: const Text(
+                    'Shop Giày',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
                   actions: [
                     IconButton(
                       tooltip: 'Reset + Reload',
@@ -313,12 +316,20 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         Expanded(
                           child: Text(
                             filterText,
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Text('${items.length} sản phẩm', style: TextStyle(color: Colors.black.withValues(alpha: 0.6))),
+                        Text(
+                          '${items.length} sản phẩm',
+                          style: TextStyle(
+                            color: Colors.black.withValues(alpha: 0.6),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -330,12 +341,28 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
                     child: Row(
                       children: [
-                        Expanded(child: Divider(color: Colors.black.withValues(alpha: 0.15), thickness: 1)),
+                        Expanded(
+                          child: Divider(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            thickness: 1,
+                          ),
+                        ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 14),
-                          child: Text('BEST SELLER', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                          child: Text(
+                            'BEST SELLER',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                            ),
+                          ),
                         ),
-                        Expanded(child: Divider(color: Colors.black.withValues(alpha: 0.15), thickness: 1)),
+                        Expanded(
+                          child: Divider(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            thickness: 1,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -345,20 +372,19 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   sliver: SliverGrid(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final p = items[index];
-                        return ProductCard(
-                          product: p,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => ProductDetailScreen(product: p)),
-                            );
-                          },
-                        );
-                      },
-                      childCount: items.length,
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final p = items[index];
+                      return ProductCard(
+                        product: p,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ProductDetailScreen(product: p),
+                            ),
+                          );
+                        },
+                      );
+                    }, childCount: items.length),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: _crossAxisCount(w),
                       mainAxisSpacing: 14,
@@ -381,18 +407,19 @@ class _DrawerItem extends StatelessWidget {
   final String? subtitle;
   final VoidCallback onTap;
 
-  const _DrawerItem({
-    required this.title,
-    required this.onTap,
-    this.subtitle,
-  });
+  const _DrawerItem({required this.title, required this.onTap, this.subtitle});
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-      subtitle: subtitle == null ? null : Text(subtitle!, style: TextStyle(color: Colors.black.withValues(alpha: 0.6))),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle!,
+              style: TextStyle(color: Colors.black.withValues(alpha: 0.6)),
+            ),
       trailing: const Icon(Icons.add),
       onTap: onTap,
     );
@@ -418,7 +445,9 @@ class _PromoBanner extends StatelessWidget {
           width: double.infinity,
           errorBuilder: (_, __, ___) => Container(
             color: Colors.black12,
-            child: const Center(child: Icon(Icons.image_not_supported_outlined)),
+            child: const Center(
+              child: Icon(Icons.image_not_supported_outlined),
+            ),
           ),
         );
       }
@@ -515,17 +544,26 @@ class _ProductSearchDelegate extends SearchDelegate<Product?> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: p.displayImage.isEmpty
-                  ? Container(color: Colors.black12, child: const Icon(Icons.image_outlined))
+                  ? Container(
+                      color: Colors.black12,
+                      child: const Icon(Icons.image_outlined),
+                    )
                   : Image.network(
                       p.displayImage,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          Container(color: Colors.black12, child: const Icon(Icons.image_outlined)),
+                      errorBuilder: (_, __, ___) => Container(
+                        color: Colors.black12,
+                        child: const Icon(Icons.image_outlined),
+                      ),
                     ),
             ),
           ),
           title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text('${p.brand} • ${p.category}', maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text(
+            '${p.brand} • ${p.category}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
           onTap: () => close(context, p), // ✅ click -> mở detail ở caller
         );
       },

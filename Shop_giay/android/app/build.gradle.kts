@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -14,20 +16,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     defaultConfig {
         // ID ứng dụng của bạn
         applicationId = "com.example.shop_app_flutter"
         
         // --- PHẦN QUAN TRỌNG ĐÃ SỬA ---
-        minSdk = 21 
+        minSdk = flutter.minSdkVersion 
         // -------------------------------
         
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode.toInteger()
+        versionCode = flutter.versionCode.toInt()
         versionName = flutter.versionName
     }
 
@@ -35,6 +33,12 @@ android {
         release {
             signingConfig = signingConfigs.getByName("debug")
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 

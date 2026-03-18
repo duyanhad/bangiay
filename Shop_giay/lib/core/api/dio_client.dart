@@ -1,11 +1,16 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../storage/secure_store.dart';
 
 class DioClient {
   static const String _productionHost = 'https://bangiay-a6e9.onrender.com';
+  static const String _localHost = 'http://10.0.2.2:8080';
 
-  // 1. TẠO HÀM DÙNG CHUNG ĐỂ LẤY HOST (Dùng cho cả API và Load Ảnh)
+  // 🔥 HÀM LẤY HOST DỰA VÀO ENVIRONMENT
   static String get hostUrl {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return kDebugMode ? _localHost : _productionHost;
+    }
     return _productionHost;
   }
 

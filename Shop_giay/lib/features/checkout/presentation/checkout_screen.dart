@@ -179,7 +179,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             context,
             MaterialPageRoute(builder: (context) => VnpayWebView(url: url)),
           );
-          if (success == true) _handleSuccess("Thanh toán thành công!");
+          if (success == true) {
+            _handleSuccess("Thanh toán thành công!");
+          } else {
+            _showSnackBar("Thanh toán thất bại hoặc đã hủy.", Colors.red);
+          }
         }
       } else {
         // --- COD HOẶC BANK TRANSFER ---

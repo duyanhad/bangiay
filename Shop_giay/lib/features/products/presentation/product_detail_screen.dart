@@ -127,10 +127,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           SnackBar(content: Text('Đã thêm ${p.name} vào giỏ hàng')),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final code = e.response?.statusCode;
+      final serverMessage = e.response?.data is Map
+          ? (e.response?.data['message']?.toString() ?? '')
+          : '';
+
+      if (code == 401) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bạn chưa đăng nhập, vui lòng đăng nhập để thêm vào giỏ hàng')),
+        );
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(serverMessage.isNotEmpty ? serverMessage : 'Không thể thêm vào giỏ hàng')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã có lỗi xảy ra, vui lòng thử lại')),
+      );
     }
   }
 
