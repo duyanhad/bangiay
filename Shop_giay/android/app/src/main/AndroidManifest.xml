@@ -2,7 +2,7 @@
     
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="shop_app_flutter"
+        android:label="ShopgiayDA"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
